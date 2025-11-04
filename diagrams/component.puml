@@ -1,0 +1,155 @@
+@startuml Backend Service Component Diagram with OpenAPI
+
+skinparam defaultTextAlignment center
+skinparam roundcorner 10
+skinparam classFontSize 12
+skinparam classFontStyle bold
+
+title Backend Service with OpenAPI - Компонентная диаграмма
+
+!define PERSON actor
+!define COMPONENT component
+!define DATABASE database
+!define RECTANGLE rectangle
+!define FOLDER folder
+
+' Акторы
+PERSON "Пользователь" as User
+PERSON "Разработчик" as Developer
+
+' Системная граница
+RECTANGLE "Backend Service System" as System {
+
+  ' OpenAPI Документация
+  FOLDER "OpenAPI Documentation" as OpenAPIDocs #lightblue {
+    COMPONENT "Swagger UI\n(Swagger UI)" as SwaggerUI #lightblue
+    COMPONENT "SpringDoc OpenAPI\n(Spring Library)" as SpringDoc #lightblue
+    COMPONENT "OpenAPI Spec\n(YAML/JSON)" as OpenAPISpec #lightblue
+  }
+
+  ' Контроллеры с аннотациями OpenAPI
+  COMPONENT "UserController\n(REST API + @Operation)" as UserController #lightgreen
+  COMPONENT "TaskController\n(REST API + @Operation)" as TaskController #lightgreen
+  COMPONENT "AuthController\n(REST API + @Operation)" as AuthController #lightgreen
+  COMPONENT "CustomExceptionHandler\n(@ControllerAdvice)" as CustomExceptionHandler #lightgreen
+
+  ' Сервисы
+  COMPONENT "UserService\n(Spring Service)" as UserService #lightyellow
+  COMPONENT "TaskService\n(Spring Service)" as TaskService #lightyellow
+  COMPONENT "AuthService\n(Spring Service)" as AuthService #lightyellow
+  COMPONENT "KafkaProducerService\n(Spring Service)" as KafkaProducerService #lightyellow
+
+  ' Репозитории и Security
+  COMPONENT "UserRepository\n(Spring Data JPA)" as UserRepository #orange
+  COMPONENT "TaskRepository\n(Spring Data JPA)" as TaskRepository #orange
+  COMPONENT "JwtTokenProvider\n(Security Component)" as JwtTokenProvider #pink
+  COMPONENT "JwtAuthenticationFilter\n(Servlet Filter)" as JwtAuthenticationFilter #pink
+
+  ' Слои данных с аннотациями OpenAPI
+  COMPONENT "DTO Layer\n(DTO + @Schema)" as DtoLayer #lightgray
+  COMPONENT "Entity Layer\n(JPA Entities)" as EntityLayer #lightgray
+
+  ' Конфигурация OpenAPI
+  COMPONENT "OpenAPIConfig\n(@Configuration)" as OpenAPIConfig #lightblue
+  COMPONENT "KafkaConfig\n(Configuration)" as KafkaConfig #brown
+}
+
+' Внешние системы
+COMPONENT "Kafka Broker" as KafkaBroker #purple
+COMPONENT "Email Sender Service" as EmailSender #purple
+DATABASE "PostgreSQL Database" as PostgreSQL #teal
+
+' Генерируемые артефакты
+COMPONENT "API Client SDK\n(Generated)" as ClientSDK #cyan
+COMPONENT "API Documentation\n(Generated)" as APIDocumentation #cyan
+
+' === ВЗАИМОДЕЙСТВИЯ ===
+
+' OpenAPI взаимодействия
+Developer --> SwaggerUI : "Интерактивная\nдокументация"
+Developer --> OpenAPISpec : "Спецификация\nOpenAPI"
+SpringDoc --> OpenAPISpec : "Автогенерация\nиз аннотаций"
+OpenAPISpec --> SwaggerUI : "Загрузка\nспецификации"
+OpenAPISpec --> ClientSDK : "Генерация\nклиентов"
+OpenAPISpec --> APIDocumentation : "Генерация\nдокументации"
+
+' Аннотации OpenAPI в контроллерах
+UserController --> SpringDoc : "@Operation\nаннотации"
+TaskController --> SpringDoc : "@Operation\nаннотации"
+AuthController --> SpringDoc : "@Operation\nаннотации"
+DtoLayer --> SpringDoc : "@Schema\nаннотации"
+
+' Конфигурация OpenAPI
+OpenAPIConfig --> SpringDoc : "@Bean\nконфигурация"
+
+' Пользовательские взаимодействия
+User --> SwaggerUI : "Тестирование API"
+User --> UserController : "POST /api/users/register"
+User --> AuthController : "POST /api/auth/login"
+User --> TaskController : "CRUD /api/tasks"
+
+' Бизнес-логика взаимодействия
+UserController --> UserService : "registerUser()"
+AuthController --> AuthService : "authenticate()"
+TaskController --> TaskService : "CRUD operations"
+
+UserService --> UserRepository : "findByEmail(), save()"
+UserService --> KafkaProducerService : "sendEmailMessage()"
+AuthService --> UserRepository : "findByEmail()"
+AuthService --> JwtTokenProvider : "generateToken()"
+TaskService --> TaskRepository : "findByUserId(), save()"
+
+' Security взаимодействия
+JwtAuthenticationFilter --> JwtTokenProvider : "validateToken()"
+
+' Data layer взаимодействия
+UserController --> DtoLayer : "JSON serialization"
+TaskController --> DtoLayer : "JSON serialization"
+UserService --> EntityLayer : "JPA mapping"
+TaskService --> EntityLayer : "JPA mapping"
+
+' Kafka взаимодействия
+KafkaConfig --> KafkaProducerService : "@Bean"
+KafkaProducerService --> KafkaBroker : "send()"
+
+' Database взаимодействия
+UserRepository --> PostgreSQL : "SQL Queries"
+TaskRepository --> PostgreSQL : "SQL Queries"
+
+' External взаимодействия
+KafkaBroker --> EmailSender : "EMAIL_SENDING_TASKS"
+
+' Обработка исключений
+UserController --> CustomExceptionHandler : "handle exceptions"
+TaskController --> CustomExceptionHandler : "handle exceptions"
+AuthController --> CustomExceptionHandler : "handle exceptions"
+
+legend bottom
+|<b>Легенда</b>|
+| OpenAPI Компоненты | Бизнес-логика | Данные | Внешние системы |
+| :--- | :--- | :--- | :--- |
+| Документация и генерация | Контроллеры и сервисы | Репозитории и сущности | Инфраструктура |
+end legend
+
+note right of SpringDoc
+  <b>SpringDoc OpenAPI</b>
+  Автоматическая генерация
+  документации из аннотаций
+  Реальное время обновления
+end note
+
+note left of SwaggerUI
+  <b>Swagger UI</b>
+  Интерактивная документация
+  Тестирование API онлайн
+  Доступна по /swagger-ui.html
+end note
+
+note right of CustomExceptionHandler
+  <b>CustomExceptionHandler</b>
+  Кастомная обработка исключений
+  (@ControllerAdvice)
+  Возвращает стандартизированные ошибки
+end note
+
+@enduml
