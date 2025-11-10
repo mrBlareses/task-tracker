@@ -1,0 +1,161 @@
+plugins {
+    id 'org.springframework.boot' version '3.3.4'
+    id 'io.spring.dependency-management' version '1.1.5'
+    id 'java'
+    id "org.openapi.generator" version "7.13.0"
+}
+
+group = 'org.mushroom'
+version = '1.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    sourceCompatibility = JavaVersion.toVersion(21)
+    targetCompatibility = JavaVersion.toVersion(21)
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // Database
+    implementation 'org.hibernate.orm:hibernate-core:6.5.3.Final'
+    implementation 'org.liquibase:liquibase-core'
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // OpenAPI
+    implementation 'org.springdoc:springdoc-openapi-ui:1.7.0'
+    implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok:1.18.34'
+    annotationProcessor 'org.projectlombok:lombok:1.18.34'
+
+    // Lombok + MapStruct integration
+    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
+
+    // MapStruct
+    implementation 'org.mapstruct:mapstruct:1.5.5.Final'
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
+
+    // Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'com.h2database:h2'
+    testImplementation 'org.testcontainers:testcontainers:1.19.3'
+    testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
+    testImplementation 'org.testcontainers:postgresql:1.19.3'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers:3.1.0'
+}
+
+// ============ OPENAPI GENERATION ============
+tasks.register('createOpenApiDir') {
+    doLast {
+        file("${projectDir}/openapi").mkdirs()
+    }
+}
+
+tasks.register('generateUserApi', org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    group = 'OpenAPI'
+    description = 'Generate User API from OpenAPI spec'
+
+    dependsOn createOpenApiDir
+
+    generatorName = 'spring'
+    inputSpec = "${projectDir}/openapi/user-api.yml"
+    outputDir = "${buildDir}/generated/user-api"
+
+    configOptions = [
+            useSpringBoot3    : "true",
+            useTags           : "true",
+            useBeanValidation : "true",
+            openApiNullable   : "false",
+            interfaceOnly     : "true",
+            apiPackage        : "org.mushroom.api",
+            modelPackage      : "org.mushroom.model",
+            configPackage     : "org.mushroom.config",
+            useLombok         : "true",
+            lombokBuilder     : "true",
+            modelLombok       : "true",
+            modelLombokBuilder: "true"
+    ]
+
+    doFirst {
+        logger.lifecycle("Generating User API from: ${inputSpec}")
+    }
+
+    doLast {
+        logger.lifecycle("User API generated to: ${outputDir}")
+    }
+}
+
+// ============ MAPSTRUCT CONFIGURATION ============
+tasks.withType(JavaCompile).configureEach {
+    options.annotationProcessorPath = configurations.annotationProcessor
+    options.compilerArgs += [
+            '-Amapstruct.defaultComponentModel=spring',
+            '-Amapstruct.injectionStrategy=constructor'
+    ]
+}
+
+tasks.named('compileJava') {
+    dependsOn tasks.named('generateUserApi')
+
+    options.annotationProcessorPath = configurations.annotationProcessor
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = [
+                    'src/main/java',
+                    "${buildDir}/generated/user-api/src/main/java",
+                    "${buildDir}/generated/sources/annotationProcessor/java/main"
+            ]
+        }
+    }
+}
+
+tasks.register('checkOpenApiSpec') {
+    group = 'OpenAPI'
+    description = 'Check if OpenAPI spec exists'
+
+    doFirst {
+        def specFile = file("${projectDir}/openapi/user-api.yml")
+        if (!specFile.exists()) {
+            throw new GradleException("OpenAPI spec not found: ${specFile.absolutePath}")
+        }
+        logger.lifecycle("OpenAPI spec found: ${specFile.absolutePath}")
+    }
+}
+
+tasks.named('generateUserApi') {
+    dependsOn tasks.named('checkOpenApiSpec')
+}
+
+tasks.register('cleanOpenApi', Delete) {
+    group = 'OpenAPI'
+    description = 'Clean generated OpenAPI code'
+    delete "${buildDir}/generated"
+}
+
+clean {
+    dependsOn tasks.named('cleanOpenApi')
+}
+
+test {
+    useJUnitPlatform()
+}

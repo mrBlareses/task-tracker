@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="1" author="MRBLARE" runOnChange="false">
+        <sql>
+            <![CDATA[
+            CREATE TABLE users
+            (
+                id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                email VARCHAR(25) NOT NULL UNIQUE,
+                password VARCHAR(16)  NOT NULL,
+                firstname VARCHAR(120)  NOT NULL,
+                lastname VARCHAR(120)  NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW()
+            );
+            CREATE UNIQUE INDEX idx_users_email ON users (email);
+            ]]>
+        </sql>
+        <comment>Create table users with unique email</comment>
+    </changeSet>
+</databaseChangeLog>
