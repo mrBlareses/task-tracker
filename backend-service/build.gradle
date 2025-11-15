@@ -49,16 +49,19 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
 
     // MapStruct
-    implementation 'org.mapstruct:mapstruct:1.5.5.Final'
-    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
+    implementation "org.mapstruct:mapstruct:1.6.0"
+    annotationProcessor "org.mapstruct:mapstruct-processor:1.6.0"
 
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'com.h2database:h2'
-    testImplementation 'org.testcontainers:testcontainers:1.19.3'
-    testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
-    testImplementation 'org.testcontainers:postgresql:1.19.3'
-    testImplementation 'org.springframework.boot:spring-boot-testcontainers:3.1.0'
+
+    // ===== Testcontainers =====
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation platform('org.testcontainers:testcontainers-bom:1.20.3')
+    testImplementation 'org.liquibase:liquibase-core'
 }
 
 // ============ OPENAPI GENERATION ============

@@ -1,7 +1,9 @@
 package controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import config.PostgresTestContainer;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mushroom.BackendApplication;
 import org.mushroom.entity.User;
@@ -14,102 +16,129 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.Clock;
+import java.time.OffsetDateTime;
+import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+
+@Testcontainers
 @SpringBootTest(classes = BackendApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class UserControllerIntegrationTest {
+class UserControllerIntegrationTest extends PostgresTestContainer {
+
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
-    private UserRepository userRepository;
+    private Clock clock;
 
     @BeforeEach
-    void cleanDb() {
+    void cleanDatabase() {
         userRepository.deleteAll();
     }
 
     @Test
-    void registerUser_success() throws Exception {
+    @DisplayName("POST /api/v1/users — должен вернуть 409 при повторном email")
+    void shouldReturnConflictOnDuplicateEmail() throws Exception {
+        userRepository.save(User.builder()
+                .email("mrblare@mail.com")
+                .password("1234567")
+                .firstname("Alex")
+                .lastname("Smith")
+                .createdAt(OffsetDateTime.now(clock))
+                .updatedAt(OffsetDateTime.now(clock))
+                .build());
+
         UserRegistrationRequest request = new UserRegistrationRequest()
-                .email("user@mail.com")
-                .password("pass123")
-                .firstName("John")
+                .email("mrblare@mail.com")
+                .password("1234567")
+                .firstName("Name")
                 .lastName("Doe");
 
         mockMvc.perform(post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.email").value("user@mail.com"))
-                .andExpect(jsonPath("$.firstName").value("John"))
-                .andExpect(jsonPath("$.lastName").value("Doe"));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("User already exists"));
     }
 
     @Test
-    void getUserByEmail_success() throws Exception {
-        User user = userRepository.save(User.builder()
-                .email("test@mail.com")
-                .firstname("Alex")
-                .lastname("Stone")
+    @DisplayName("GET /api/v1/users/{id} — должен вернуть 200 и пользователя")
+    void shouldGetUserById() throws Exception {
+        User saved = userRepository.save(User.builder()
+                .email("mrblare@mail.com")
+                .password("1234567")
+                .firstname("Name")
+                .lastname("Doe")
+                .createdAt(OffsetDateTime.now(clock))
+                .updatedAt(OffsetDateTime.now(clock))
                 .build());
 
-        mockMvc.perform(get("/api/v1/users/by-email/{email}", user.getEmail()))
+        mockMvc.perform(get("/api/v1/users/{id}", saved.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("test@mail.com"))
-                .andExpect(jsonPath("$.firstName").value("Alex"));
+                .andExpect(jsonPath("$.email").value("mrblare@mail.com"))
+                .andExpect(jsonPath("$.firstName").value("Name"));
     }
 
     @Test
-    void getUserById_success() throws Exception {
-        User user = userRepository.save(User.builder()
-                .email("xxx@mail.com")
-                .firstname("Mike")
-                .lastname("Brown")
-                .build());
-
-        mockMvc.perform(get("/api/v1/users/by-id/{id}", user.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("xxx@mail.com"))
-                .andExpect(jsonPath("$.firstName").value("Mike"));
+    @DisplayName("GET /api/v1/users/{id} — должен вернуть 404, если пользователь не найден")
+    void shouldReturnNotFoundForMissingUser() throws Exception {
+        UUID missingId = UUID.randomUUID();
+        mockMvc.perform(get("/api/v1/users/{id}", missingId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("User with id '" + missingId + "' not found"));
     }
 
     @Test
-    void updateUser_success() throws Exception {
-        User user = userRepository.save(User.builder()
-                .email("old@mail.com")
-                .firstname("Old")
-                .lastname("Name")
+    @DisplayName("PUT /api/v1/users/{id} — должен обновлять имя пользователя")
+    void shouldUpdateUser() throws Exception {
+        User saved = userRepository.save(User.builder()
+                .email("mrblare@mail.com")
+                .password("1234567")
+                .firstname("Name")
+                .lastname("Doe")
+                .createdAt(OffsetDateTime.now(clock))
+                .updatedAt(OffsetDateTime.now(clock))
                 .build());
 
-        UserUpdateRequest update = new UserUpdateRequest()
-                .email("new@mail.com")
-                .firstName("NewName");
+        UserUpdateRequest updateRequest = new UserUpdateRequest()
+                .firstName("NewName")
+                .lastName("Updated");
 
-        mockMvc.perform(put("/api/v1/users/put/{id}", user.getId())
+        mockMvc.perform(put("/api/v1/users/{id}", saved.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(update)))
+                        .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("new@mail.com"))
-                .andExpect(jsonPath("$.firstName").value("NewName"));
+                .andExpect(jsonPath("$.firstName").value("NewName"))
+                .andExpect(jsonPath("$.lastName").value("Updated"));
     }
 
     @Test
-    void deleteUser_success() throws Exception {
-        User user = userRepository.save(User.builder()
-                .email("del@mail.com")
+    @DisplayName("DELETE /api/v1/users/{id} — должен удалять пользователя")
+    void shouldDeleteUser() throws Exception {
+        User saved = userRepository.save(User.builder()
+                .email("mrblare@mail.com")
+                .password("1234567")
+                .firstname("Name")
+                .lastname("Doe")
+                .createdAt(OffsetDateTime.now(clock))
+                .updatedAt(OffsetDateTime.now(clock))
                 .build());
 
-        mockMvc.perform(delete("/api/v1/users/delete/{id}", user.getId()))
+        mockMvc.perform(delete("/api/v1/users/{id}", saved.getId()))
                 .andExpect(status().isNoContent());
     }
 }

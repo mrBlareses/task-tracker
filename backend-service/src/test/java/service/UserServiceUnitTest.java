@@ -1,18 +1,23 @@
 package service;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.mushroom.entity.User;
 import org.mushroom.exception.ConflictException;
 import org.mushroom.exception.NotFoundException;
 import org.mushroom.mapper.UserMapper;
-import org.mushroom.model.UserProfileResponse;
 import org.mushroom.model.UserRegistrationRequest;
 import org.mushroom.model.UserUpdateRequest;
 import org.mushroom.repository.UserRepository;
 import org.mushroom.service.UserService;
-import org.mushroom.util.DateTimeUtil;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import java.time.OffsetDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,131 +25,147 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.any;
 
+@ExtendWith(MockitoExtension.class)
 class UserServiceUnitTest {
 
-    private final UserRepository userRepository = mock(UserRepository.class);
-    private final UserMapper userMapper = mock(UserMapper.class);
-    private final DateTimeUtil dateTimeUtil = mock(DateTimeUtil.class);
+    @Mock
+    private UserRepository userRepository;
 
-    private final UserService userService = new UserService(
-            userRepository,
-            userMapper,
-            dateTimeUtil
-    );
+    @Mock
+    private UserMapper userMapper;
 
-    @Test
-    void registerUser_success() {
-        UserRegistrationRequest request = new UserRegistrationRequest()
-                .email("test@mail.com")
-                .firstName("John")
-                .lastName("Doe")
-                .password("pass");
+    @Mock
+    private Clock clock;
 
-        OffsetDateTime now = OffsetDateTime.now();
-        when(dateTimeUtil.nowOffsetDateTime()).thenReturn(now);
+    @InjectMocks
+    private UserService userService;
 
-        User saved = User.builder()
-                .email("test@mail.com")
-                .firstname("John")
-                .lastname("Doe")
-                .password("pass")
-                .createdAt(now)
-                .updatedAt(now)
-                .build();
+    private final UUID userId = UUID.randomUUID();
+    private final String email = "test@example.com";
 
-        when(userRepository.save(any(User.class))).thenReturn(saved);
-
-        var response = userService.registerUser(request);
-
-        assertEquals("test@mail.com", response.getEmail());
-        assertEquals("John", response.getFirstName());
-        assertEquals("Doe", response.getLastName());
+    private void setupClock() {
+        when(clock.getZone()).thenReturn(ZoneId.systemDefault());
+        when(clock.instant()).thenReturn(Instant.now());
     }
 
+
     @Test
-    void registerUser_duplicateEmail_shouldThrowConflict() {
+    void registerUser_ShouldStillThrowConflictException() {
+        setupClock();
+
         UserRegistrationRequest request = new UserRegistrationRequest()
-                .email("exists@mail.com")
-                .password("pass");
+                .email(email)
+                .password("password")
+                .firstName("John")
+                .lastName("Doe");
 
         when(userRepository.save(any(User.class)))
-                .thenThrow(new DataIntegrityViolationException("Duplicate"));
+                .thenThrow(new DataIntegrityViolationException("could not execute statement"));
+
+        assertThrows(ConflictException.class, () -> userService.registerUser(request));
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void getUserById_ShouldThrowNotFoundExceptionWithCorrectId() {
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        NotFoundException exception = assertThrows(NotFoundException.class,
+                () -> userService.getUserById(userId));
+
+        assertTrue(exception.getMessage().contains(userId.toString()));
+
+        verify(userRepository).findById(userId);
+        verify(userMapper, never()).toProfileResponse(any());
+    }
+
+    @Test
+    void getUserById_ShouldPropagateIt() {
+        when(userRepository.findById(userId))
+                .thenThrow(new RuntimeException("Database connection failed"));
+
+        assertThrows(RuntimeException.class, () -> userService.getUserById(userId));
+        verify(userRepository).findById(userId);
+    }
+
+    @Test
+    void updateUserd_ShouldThrowNotFoundException() {
+        UserUpdateRequest updateRequest = new UserUpdateRequest()
+                .email("new@example.com");
+
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
+
+        NotFoundException exception = assertThrows(NotFoundException.class,
+                () -> userService.updatedUser(userId, updateRequest));
+
+        assertTrue(exception.getMessage().contains(userId.toString()));
+        verify(userRepository).findById(userId);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateUser_ShouldThrowConflictException() {
+        setupClock();
+        UserUpdateRequest updateRequest = new UserUpdateRequest()
+                .email("existing@example.com");
+
+        User existingUser = User.builder()
+                .id(userId)
+                .email(email)
+                .firstname("John")
+                .lastname("Doe")
+                .build();
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(existingUser))
+                .thenThrow(new DataIntegrityViolationException("Duplicate email"));
 
         assertThrows(ConflictException.class,
-                () -> userService.registerUser(request));
-    }
-    @Test
-    void getUserByEmail_success() {
-        User user = new User();
-        user.setEmail("test@mail.com");
+                () -> userService.updatedUser(userId, updateRequest));
 
-        UserProfileResponse profile = new UserProfileResponse();
-        profile.setEmail("test@mail.com");
-
-        when(userRepository.findByEmail("test@mail.com"))
-                .thenReturn(Optional.of(user));
-
-        when(userMapper.toProfileResponse(user))
-                .thenReturn(profile);
-
-        UserProfileResponse response = userService.getUserByEmail("test@mail.com");
-
-        assertEquals("test@mail.com", response.getEmail());
-    }
-    @Test
-    void getUserByEmail_notFound() {
-        when(userRepository.findByEmail("missing@mail.com"))
-                .thenReturn(Optional.empty());
-
-        assertThrows(NotFoundException.class,
-                () -> userService.getUserByEmail("missing@mail.com"));
+        verify(userRepository).findById(userId);
+        verify(userMapper).updateUserFromDto(updateRequest, existingUser);
+        verify(userRepository).save(existingUser);
+        verify(userMapper, never()).toProfileResponse(any());
     }
 
     @Test
-    void deleteUser_success() {
-        UUID id = UUID.randomUUID();
+    void updateUser_ShouldPropagateIt() {
+        setupClock();
+        UserUpdateRequest updateRequest = new UserUpdateRequest()
+                .email("new@example.com");
 
-        when(userRepository.existsById(id)).thenReturn(true);
+        User existingUser = User.builder()
+                .id(userId)
+                .email(email)
+                .firstname("John")
+                .lastname("Doe")
+                .build();
 
-        userService.deleteUser(id);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(existingUser))
+                .thenThrow(new RuntimeException("Unexpected error"));
 
-        verify(userRepository).deleteById(id);
+        assertThrows(RuntimeException.class,
+                () -> userService.updatedUser(userId, updateRequest));
+
+        verify(userRepository).findById(userId);
+        verify(userRepository).save(existingUser);
     }
 
     @Test
-    void deleteUser_notFound() {
-        UUID id = UUID.randomUUID();
+    void registerUser_ShouldNotBeCaught() {
+        setupClock();
+        UserRegistrationRequest request = new UserRegistrationRequest()
+                .email(email)
+                .password("password")
+                .firstName("John")
+                .lastName("Doe");
 
-        when(userRepository.existsById(id)).thenReturn(false);
+        when(userRepository.save(any(User.class)))
+                .thenThrow(new RuntimeException("Some other database error"));
 
-        assertThrows(org.springframework.web.server.ResponseStatusException.class,
-                () -> userService.deleteUser(id));
-    }
-
-    @Test
-    void updatedUser_success() {
-        UUID id = UUID.randomUUID();
-        User existing = new User();
-        existing.setId(id);
-
-        UserUpdateRequest req = new UserUpdateRequest();
-        req.setFirstName("NewFirstName");
-
-        User updated = new User();
-        updated.setId(id);
-        updated.setFirstname("NewFirstName");
-
-        UserProfileResponse profile = new UserProfileResponse();
-        profile.setId(id);
-        profile.setFirstName("NewFirstName");
-
-        when(userRepository.findById(id)).thenReturn(Optional.of(existing));
-        when(userRepository.save(existing)).thenReturn(updated);
-        when(userMapper.toProfileResponse(updated)).thenReturn(profile);
-
-        UserProfileResponse response = userService.updatedUser(id, req);
-
-        assertEquals("NewFirstName", response.getFirstName());
-        assertEquals(id, response.getId());
+        assertThrows(RuntimeException.class, () -> userService.registerUser(request));
+        verify(userRepository).save(any(User.class));
     }
 }

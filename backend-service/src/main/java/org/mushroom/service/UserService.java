@@ -1,23 +1,19 @@
 package org.mushroom.service;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.mushroom.entity.User;
 import org.mushroom.exception.ConflictException;
-import org.mushroom.exception.InternalServerErrorException;
 import org.mushroom.exception.NotFoundException;
 import org.mushroom.mapper.UserMapper;
-import org.mushroom.model.UserProfileResponse;
 import org.mushroom.model.UserRegistrationRequest;
 import org.mushroom.model.UserResponse;
 import org.mushroom.model.UserUpdateRequest;
 import org.mushroom.repository.UserRepository;
-import org.mushroom.util.DateTimeUtil;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -26,19 +22,17 @@ import java.util.UUID;
 public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
-    private final DateTimeUtil dateTimeUtil;
+    private final Clock clock;
 
     public UserResponse registerUser(UserRegistrationRequest request) {
         try {
-            OffsetDateTime now = dateTimeUtil.nowOffsetDateTime();
-
             User user = userRepository.save(User.builder()
                     .email(request.getEmail())
                     .password(request.getPassword())
                     .firstname(request.getFirstName())
                     .lastname(request.getLastName())
-                    .createdAt(now)
-                    .updatedAt(now)
+                    .createdAt(OffsetDateTime.now(clock))
+                    .updatedAt(OffsetDateTime.now(clock))
                     .build());
 
             return new UserResponse()
@@ -51,44 +45,30 @@ public class UserService {
         }
     }
 
-    public UserProfileResponse getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .map(userMapper::toProfileResponse)
-                .orElseThrow(() -> NotFoundException.userNotFoundByEmail(email));
-    }
-
-    public UserProfileResponse getUserById(UUID id) {
+    public UserResponse getUserById(UUID id) {
         return userRepository.findById(id)
                 .map(userMapper::toProfileResponse)
                 .orElseThrow(() -> NotFoundException.userNotFoundById(id));
     }
 
-    @Transactional
     public void deleteUser(UUID id) {
-        if (!userRepository.existsById(id)) {
-            throw NotFoundException.userNotFoundById(id);
-        }
         userRepository.deleteById(id);
     }
 
     @Transactional
-    public UserProfileResponse updatedUser(UUID id, @Valid UserUpdateRequest updateRequest) {
+    public UserResponse updatedUser(UUID id, UserUpdateRequest updateRequest) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> NotFoundException.userNotFoundById(id));
+
+        userMapper.updateUserFromDto(updateRequest, user);
+        user.setUpdatedAt(OffsetDateTime.now(clock));
+
         try {
-            User user = userRepository.findById(id)
-                    .orElseThrow(() -> NotFoundException.userNotFoundById(id));
-
-            OffsetDateTime now = dateTimeUtil.nowOffsetDateTime();
-
-            userMapper.updateUserFromDto(updateRequest, user);
-            user.setUpdatedAt(now);
-
             User updatedUser = userRepository.save(user);
             return userMapper.toProfileResponse(updatedUser);
 
         } catch (DataIntegrityViolationException e) {
             throw ConflictException.duplicateUser();
-        } catch (Exception e) {
-            throw InternalServerErrorException.databaseError();
         }
     }
 }

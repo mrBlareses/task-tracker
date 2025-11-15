@@ -2,7 +2,7 @@ package org.mushroom.mapper;
 
 import org.mapstruct.*;
 import org.mushroom.entity.User;
-import org.mushroom.model.UserProfileResponse;
+import org.mushroom.model.UserResponse;
 import org.mushroom.model.UserUpdateRequest;
 
 @Mapper(
@@ -15,7 +15,7 @@ public interface UserMapper {
     @Mapping(target = "lastName", source = "lastname")
     @Mapping(target = "createdAt", source = "createdAt")
     @Mapping(target = "updatedAt", source = "updatedAt")
-    UserProfileResponse toProfileResponse(User user);
+    UserResponse toProfileResponse(User user);
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "email", source = "email")
