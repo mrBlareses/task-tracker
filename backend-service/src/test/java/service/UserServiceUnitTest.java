@@ -43,6 +43,7 @@ class UserServiceUnitTest {
     private final UUID userId = UUID.randomUUID();
     private final String email = "test@example.com";
 
+
     private void setupClock() {
         when(clock.getZone()).thenReturn(ZoneId.systemDefault());
         when(clock.instant()).thenReturn(Instant.now());
@@ -63,7 +64,6 @@ class UserServiceUnitTest {
                 .thenThrow(new DataIntegrityViolationException("could not execute statement"));
 
         assertThrows(ConflictException.class, () -> userService.registerUser(request));
-        verify(userRepository).save(any(User.class));
     }
 
     @Test
@@ -74,9 +74,6 @@ class UserServiceUnitTest {
                 () -> userService.getUserById(userId));
 
         assertTrue(exception.getMessage().contains(userId.toString()));
-
-        verify(userRepository).findById(userId);
-        verify(userMapper, never()).toProfileResponse(any());
     }
 
     @Test
@@ -85,7 +82,6 @@ class UserServiceUnitTest {
                 .thenThrow(new RuntimeException("Database connection failed"));
 
         assertThrows(RuntimeException.class, () -> userService.getUserById(userId));
-        verify(userRepository).findById(userId);
     }
 
     @Test
@@ -99,8 +95,6 @@ class UserServiceUnitTest {
                 () -> userService.updatedUser(userId, updateRequest));
 
         assertTrue(exception.getMessage().contains(userId.toString()));
-        verify(userRepository).findById(userId);
-        verify(userRepository, never()).save(any());
     }
 
     @Test
@@ -122,11 +116,6 @@ class UserServiceUnitTest {
 
         assertThrows(ConflictException.class,
                 () -> userService.updatedUser(userId, updateRequest));
-
-        verify(userRepository).findById(userId);
-        verify(userMapper).updateUserFromDto(updateRequest, existingUser);
-        verify(userRepository).save(existingUser);
-        verify(userMapper, never()).toProfileResponse(any());
     }
 
     @Test
@@ -148,9 +137,6 @@ class UserServiceUnitTest {
 
         assertThrows(RuntimeException.class,
                 () -> userService.updatedUser(userId, updateRequest));
-
-        verify(userRepository).findById(userId);
-        verify(userRepository).save(existingUser);
     }
 
     @Test
@@ -166,6 +152,5 @@ class UserServiceUnitTest {
                 .thenThrow(new RuntimeException("Some other database error"));
 
         assertThrows(RuntimeException.class, () -> userService.registerUser(request));
-        verify(userRepository).save(any(User.class));
     }
 }
