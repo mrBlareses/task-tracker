@@ -31,7 +31,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Testcontainers
 @SpringBootTest(classes = BackendApplication.class)
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
 class UserControllerIntegrationTest extends PostgresTestContainer {
 
     @Autowired
