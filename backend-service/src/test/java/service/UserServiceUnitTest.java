@@ -149,9 +149,13 @@ class UserServiceUnitTest {
                 .firstName("John")
                 .lastName("Doe");
 
+        String expectedMessage = "Some other database error";
         when(userRepository.save(any(User.class)))
-                .thenThrow(new RuntimeException("Some other database error"));
+                .thenThrow(new RuntimeException(expectedMessage));
 
-        assertThrows(RuntimeException.class, () -> userService.registerUser(request));
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> userService.registerUser(request));
+
+        assertEquals(expectedMessage, exception.getMessage());
     }
 }
