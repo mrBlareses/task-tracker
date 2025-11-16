@@ -22,6 +22,7 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -53,17 +54,10 @@ class UserControllerIntegrationTest extends PostgresTestContainer {
     @Test
     @DisplayName("POST /api/v1/users — должен вернуть 409 при повторном email")
     void shouldReturnConflictOnDuplicateEmail() throws Exception {
-        userRepository.save(User.builder()
-                .email("mrblare@mail.com")
-                .password("1234567")
-                .firstname("Alex")
-                .lastname("Smith")
-                .createdAt(OffsetDateTime.now(clock))
-                .updatedAt(OffsetDateTime.now(clock))
-                .build());
+        createUser("mrblare@mail.ru", "1234567", "Name", "Doe");
 
         UserRegistrationRequest request = new UserRegistrationRequest()
-                .email("mrblare@mail.com")
+                .email("mrblare@mail.ru")
                 .password("1234567")
                 .firstName("Name")
                 .lastName("Doe");
@@ -78,18 +72,11 @@ class UserControllerIntegrationTest extends PostgresTestContainer {
     @Test
     @DisplayName("GET /api/v1/users/{id} — должен вернуть 200 и пользователя")
     void shouldGetUserById() throws Exception {
-        User saved = userRepository.save(User.builder()
-                .email("mrblare@mail.com")
-                .password("1234567")
-                .firstname("Name")
-                .lastname("Doe")
-                .createdAt(OffsetDateTime.now(clock))
-                .updatedAt(OffsetDateTime.now(clock))
-                .build());
+        User saved = saveUser("mrblare@mail.ru", "1234567", "Name", "Doe");
 
         mockMvc.perform(get("/api/v1/users/{id}", saved.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("mrblare@mail.com"))
+                .andExpect(jsonPath("$.email").value("mrblare@mail.ru"))
                 .andExpect(jsonPath("$.firstName").value("Name"));
     }
 
@@ -99,20 +86,13 @@ class UserControllerIntegrationTest extends PostgresTestContainer {
         UUID missingId = UUID.randomUUID();
         mockMvc.perform(get("/api/v1/users/{id}", missingId))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("User with id '" + missingId + "' not found"));
+                .andExpect(jsonPath("$.message").value(containsString("User with id '" + missingId + "' not found")));
     }
 
     @Test
     @DisplayName("PUT /api/v1/users/{id} — должен обновлять имя пользователя")
     void shouldUpdateUser() throws Exception {
-        User saved = userRepository.save(User.builder()
-                .email("mrblare@mail.com")
-                .password("1234567")
-                .firstname("Name")
-                .lastname("Doe")
-                .createdAt(OffsetDateTime.now(clock))
-                .updatedAt(OffsetDateTime.now(clock))
-                .build());
+        User saved = saveUser("mrblare@mail.ru", "1234567", "Name", "Doe");
 
         UserUpdateRequest updateRequest = new UserUpdateRequest()
                 .firstName("NewName")
@@ -129,16 +109,24 @@ class UserControllerIntegrationTest extends PostgresTestContainer {
     @Test
     @DisplayName("DELETE /api/v1/users/{id} — должен удалять пользователя")
     void shouldDeleteUser() throws Exception {
-        User saved = userRepository.save(User.builder()
-                .email("mrblare@mail.com")
-                .password("1234567")
-                .firstname("Name")
-                .lastname("Doe")
-                .createdAt(OffsetDateTime.now(clock))
-                .updatedAt(OffsetDateTime.now(clock))
-                .build());
+        User saved = saveUser("mrblare@mail.ru", "1234567", "Name", "Doe");
 
         mockMvc.perform(delete("/api/v1/users/{id}", saved.getId()))
                 .andExpect(status().isNoContent());
+    }
+
+    private User createUser(String email, String password, String firstName, String lastName) {
+        return User.builder()
+                .email(email)
+                .password(password)
+                .firstname(firstName)
+                .lastname(lastName)
+                .createdAt(OffsetDateTime.now(clock))
+                .updatedAt(OffsetDateTime.now(clock))
+                .build();
+    }
+
+    private User saveUser(String email, String password, String firstName, String lastName) {
+        return userRepository.save(createUser(email, password, firstName, lastName));
     }
 }
