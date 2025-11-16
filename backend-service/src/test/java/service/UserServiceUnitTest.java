@@ -45,7 +45,7 @@ class UserServiceUnitTest {
     private final String email = "test@example.com";
 
     @BeforeEach
-    public void setupClock() {
+    void setupClock() {
         when(clock.getZone()).thenReturn(ZoneId.systemDefault());
         when(clock.instant()).thenReturn(Instant.now());
     }
