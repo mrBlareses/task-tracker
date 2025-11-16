@@ -61,14 +61,6 @@ public class GlobalExceptionHandler {
         return build(ex.getMessage(), req, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex,
-                                                                      HttpServletRequest req) {
-
-        String message = "Data integrity violation: " + ex.getMostSpecificCause().getMessage();
-        return build(message, req, HttpStatus.CONFLICT);
-    }
-
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
                                                                       HttpServletRequest req) {
