@@ -97,7 +97,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleRuntime(Exception ex,
+    public ResponseEntity<ErrorResponse> handleAllExceptions(Exception ex,
                                                        HttpServletRequest req) {
 
         String message = "Internal server error: " + ex.getMessage();
