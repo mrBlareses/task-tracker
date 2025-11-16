@@ -48,7 +48,7 @@ public class UserService {
     public UserResponse getUserById(UUID id) {
         return userRepository.findById(id)
                 .map(userMapper::toProfileResponse)
-                .orElseThrow(() -> NotFoundException.userNotFoundById(id));
+                .orElseThrow(() -> new NotFoundException("User with id '" + id + "' not found"));
     }
 
     public void deleteUser(UUID id) {
@@ -58,7 +58,7 @@ public class UserService {
     @Transactional
     public UserResponse updatedUser(UUID id, UserUpdateRequest updateRequest) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> NotFoundException.userNotFoundById(id));
+                .orElseThrow(() -> new NotFoundException("User with id '" + id + "' not found"));
 
         userMapper.updateUserFromDto(updateRequest, user);
         user.setUpdatedAt(OffsetDateTime.now(clock));
