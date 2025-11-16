@@ -1,5 +1,6 @@
 package service;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -43,8 +44,8 @@ class UserServiceUnitTest {
     private final UUID userId = UUID.randomUUID();
     private final String email = "test@example.com";
 
-
-    private void setupClock() {
+    @BeforeEach
+    public void setupClock() {
         when(clock.getZone()).thenReturn(ZoneId.systemDefault());
         when(clock.instant()).thenReturn(Instant.now());
     }
