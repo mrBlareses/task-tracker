@@ -1,11 +1,8 @@
 package org.mushroom.exception;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
-
-public class InternalServerErrorException extends ResponseStatusException {
+public class InternalServerErrorException extends RuntimeException {
     public InternalServerErrorException(String message) {
-        super(HttpStatus.INTERNAL_SERVER_ERROR, message);
+        super(message);
     }
 
     public static InternalServerErrorException databaseError() {
