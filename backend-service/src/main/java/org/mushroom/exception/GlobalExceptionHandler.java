@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import javax.naming.AuthenticationException;
 import java.nio.file.AccessDeniedException;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -22,6 +23,8 @@ import java.util.List;
 @ControllerAdvice
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
+    private final Clock clock;
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex,
                                                           HttpServletRequest req) {
@@ -110,7 +113,7 @@ public class GlobalExceptionHandler {
 
         ErrorResponse body = new ErrorResponse()
                 .message(message)
-                .timestamp(OffsetDateTime.now())
+                .timestamp(OffsetDateTime.now(clock))
                 .path(req.getRequestURI());
 
         return ResponseEntity.status(status).body(body);
