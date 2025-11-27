@@ -15,7 +15,7 @@ public abstract class PostgresTestContainer {
             new PostgreSQLContainer<>("postgres:16-alpine")
                     .withDatabaseName("task-tracker-test")
                     .withUsername("postgres")
-                    .withPassword("admin")
+                    .withPassword("admin123")
                     .waitingFor(Wait.forListeningPort());
 
     @DynamicPropertySource

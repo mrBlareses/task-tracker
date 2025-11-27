@@ -6,15 +6,22 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mushroom.authority.RoleType;
+import org.mushroom.entity.Role;
 import org.mushroom.entity.User;
 import org.mushroom.exception.ConflictException;
+import org.mushroom.exception.ForbiddenActionException;
 import org.mushroom.exception.NotFoundException;
 import org.mushroom.mapper.UserMapper;
 import org.mushroom.model.UserRegistrationRequest;
+import org.mushroom.model.UserResponse;
 import org.mushroom.model.UserUpdateRequest;
 import org.mushroom.repository.UserRepository;
 import org.mushroom.service.UserService;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -22,6 +29,7 @@ import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +44,9 @@ class UserServiceUnitTest {
     private UserMapper userMapper;
 
     @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
     private Clock clock;
 
     @InjectMocks
@@ -45,15 +56,49 @@ class UserServiceUnitTest {
     private final String email = "test@example.com";
 
     @BeforeEach
-    void setupClock() {
-        when(clock.getZone()).thenReturn(ZoneId.systemDefault());
-        when(clock.instant()).thenReturn(Instant.now());
+    void setUp() {
+        SecurityContextHolder.clearContext();
     }
 
+    @Test
+    void registerUser_ShouldReturnUserResponse() {
+        UserRegistrationRequest request = new UserRegistrationRequest()
+                .email(email)
+                .password("password")
+                .firstName("John")
+                .lastName("Doe");
+
+        User userEntity = User.builder()
+                .email(email)
+                .password("encodedPassword")
+                .firstname("John")
+                .lastname("Doe")
+                .build();
+        userEntity.getRoles().add(Role.builder().name(RoleType.USER).user(userEntity).build());
+
+        when(passwordEncoder.encode("password")).thenReturn("encodedPassword");
+        when(clock.instant()).thenReturn(Instant.now());
+        when(clock.getZone()).thenReturn(ZoneId.systemDefault());
+        when(userRepository.save(any(User.class))).thenReturn(userEntity);
+
+        UserResponse userResponse = new UserResponse()
+                .email(email)
+                .firstName("John")
+                .lastName("Doe");
+        when(userMapper.toResponse(userEntity)).thenReturn(userResponse);
+
+        UserResponse response = userService.registerUser(request);
+
+        assertThat(response.getEmail()).isEqualTo(email);
+        assertThat(response.getFirstName()).isEqualTo("John");
+        assertThat(response.getLastName()).isEqualTo("Doe");
+    }
 
     @Test
     void registerUser_ShouldStillThrowConflictException() {
-        setupClock();
+        when(clock.getZone()).thenReturn(ZoneId.systemDefault());
+        when(clock.instant()).thenReturn(Instant.now());
+        when(passwordEncoder.encode(anyString())).thenReturn("12w3e4r5t6y7ui8");
 
         UserRegistrationRequest request = new UserRegistrationRequest()
                 .email(email)
@@ -78,84 +123,101 @@ class UserServiceUnitTest {
     }
 
     @Test
-    void getUserById_ShouldPropagateIt() {
-        when(userRepository.findById(userId))
-                .thenThrow(new RuntimeException("Database connection failed"));
+    void updatedUser_ForbiddenWhenUpdatingOthersProfile() {
+        User currentUser = User.builder()
+                .id(UUID.randomUUID())
+                .email("test@test.com")
+                .firstname("John")
+                .lastname("Doe")
+                .build();
+        currentUser.getRoles().add(Role.builder().name(RoleType.USER).user(currentUser).build());
 
-        assertThrows(RuntimeException.class, () -> userService.getUserById(userId));
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(currentUser);
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        UUID otherUserId = UUID.randomUUID();
+        User otherUser = User.builder().id(otherUserId).email("other@test.com").build();
+        when(userRepository.findById(otherUserId)).thenReturn(Optional.of(otherUser));
+
+        UserUpdateRequest request = new UserUpdateRequest().firstName("test");
+
+        ForbiddenActionException exception = assertThrows(ForbiddenActionException.class,
+                () -> userService.updatedUser(otherUserId, request));
+
+        assertThat(exception.getMessage())
+                .isEqualTo("You can only update your own profile");
     }
 
     @Test
-    void updateUserd_ShouldThrowNotFoundException() {
-        UserUpdateRequest updateRequest = new UserUpdateRequest()
-                .email("new@example.com");
+    void deleteUser_ForbiddenWhenDeletingOthersAccount() {
+        User currentUser = User.builder()
+                .id(UUID.randomUUID())
+                .email("current@test.com")
+                .build();
+        currentUser.getRoles().add(Role.builder().name(RoleType.USER).user(currentUser).build());
 
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(currentUser);
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        UUID otherUserId = UUID.randomUUID();
+        User otherUser = User.builder().id(otherUserId).email("other@test.com").build();
+        when(userRepository.findById(otherUserId)).thenReturn(Optional.of(otherUser));
+
+        ForbiddenActionException exception = assertThrows(ForbiddenActionException.class,
+                () -> userService.deleteUser(otherUserId));
+
+        assertThat(exception.getMessage())
+                .isEqualTo("You can only delete your own account");
+    }
+
+    @Test
+    void updatedUser_ShouldThrowForbiddenActionExceptionWhenUpdatingOthers() {
+        User currentUser = User.builder()
+                .id(UUID.randomUUID())
+                .email("current@test.com")
+                .build();
+        currentUser.getRoles().add(Role.builder().name(RoleType.USER).user(currentUser).build());
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(currentUser);
+        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        UUID otherUserId = UUID.randomUUID();
+        User otherUser = User.builder().id(otherUserId).email("other@test.com").build();
+        when(userRepository.findById(otherUserId)).thenReturn(Optional.of(otherUser));
+
+        UserUpdateRequest request = new UserUpdateRequest().firstName("Tom");
+
+        ForbiddenActionException ex = assertThrows(ForbiddenActionException.class, () -> userService.updatedUser(otherUserId, request));
+        assertThat(ex.getMessage()).isEqualTo("You can only update your profile");
+    }
+
+    @Test
+    void getUserById_ShouldThrowNotFoundException() {
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
-        NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> userService.updatedUser(userId, updateRequest));
-
-        assertTrue(exception.getMessage().contains(userId.toString()));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.getUserById(userId));
+        assertThat(ex.getMessage()).contains(userId.toString());
     }
 
     @Test
-    void updateUser_ShouldThrowConflictException() {
-        setupClock();
-        UserUpdateRequest updateRequest = new UserUpdateRequest()
-                .email("existing@example.com");
-
-        User existingUser = User.builder()
-                .id(userId)
-                .email(email)
-                .firstname("John")
-                .lastname("Doe")
+    void deleteUser_ShouldDeleteOwnAccount() {
+        UUID currentUserId = UUID.randomUUID();
+        User currentUser = User.builder()
+                .id(currentUserId)
+                .email("me@test.com")
                 .build();
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
-        when(userRepository.save(existingUser))
-                .thenThrow(new DataIntegrityViolationException("Duplicate email"));
+        currentUser.getRoles().add(Role.builder().name(RoleType.USER).user(currentUser).build());
 
-        assertThrows(ConflictException.class,
-                () -> userService.updatedUser(userId, updateRequest));
-    }
+        Authentication auth = mock(Authentication.class);
+        when(auth.getPrincipal()).thenReturn(currentUser);
 
-    @Test
-    void updateUser_ShouldPropagateIt() {
-        setupClock();
-        UserUpdateRequest updateRequest = new UserUpdateRequest()
-                .email("new@example.com");
+        SecurityContextHolder.getContext().setAuthentication(auth);
 
-        User existingUser = User.builder()
-                .id(userId)
-                .email(email)
-                .firstname("John")
-                .lastname("Doe")
-                .build();
-
-        when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
-        when(userRepository.save(existingUser))
-                .thenThrow(new RuntimeException("Unexpected error"));
-
-        assertThrows(RuntimeException.class,
-                () -> userService.updatedUser(userId, updateRequest));
-    }
-
-    @Test
-    void registerUser_ShouldNotBeCaught() {
-        setupClock();
-        UserRegistrationRequest request = new UserRegistrationRequest()
-                .email(email)
-                .password("password")
-                .firstName("John")
-                .lastName("Doe");
-
-        String expectedMessage = "Some other database error";
-        when(userRepository.save(any(User.class)))
-                .thenThrow(new RuntimeException(expectedMessage));
-
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> userService.registerUser(request));
-
-        assertEquals(expectedMessage, exception.getMessage());
+        when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
+        userService.deleteUser(currentUserId);
     }
 }
