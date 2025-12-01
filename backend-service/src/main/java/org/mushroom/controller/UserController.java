@@ -3,9 +3,7 @@ package org.mushroom.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.mushroom.api.UsersApi;
-import org.mushroom.model.UserRegistrationRequest;
-import org.mushroom.model.UserResponse;
-import org.mushroom.model.UserUpdateRequest;
+import org.mushroom.model.*;
 import org.mushroom.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,8 +17,8 @@ public class UserController implements UsersApi {
     private final UserService userService;
 
     @Override
-    public ResponseEntity<UserResponse> registerUser(UserRegistrationRequest request) {
-        UserResponse response = userService.registerUser(request);
+    public ResponseEntity<UserRegistrationResponse> registerUser(UserRegistrationRequest request) {
+        UserRegistrationResponse response = userService.registerUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

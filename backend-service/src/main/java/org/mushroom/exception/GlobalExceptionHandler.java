@@ -3,16 +3,16 @@ package org.mushroom.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.mushroom.model.ErrorResponse;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ResponseStatusException;
-
 import javax.naming.AuthenticationException;
 import java.nio.file.AccessDeniedException;
 import java.time.Clock;
@@ -57,8 +57,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(NotFoundException ex,
                                                         HttpServletRequest req) {
-
-        return build(ex.getMessage(), req, HttpStatus.NOT_FOUND);
+        String message = "User not found" + ex.getMessage();
+        return build(message, req, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -97,6 +97,35 @@ public class GlobalExceptionHandler {
 
         String message = "Internal server error: " + ex.getMessage();
         return build(message, req, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(ForbiddenActionException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenActionException ex, HttpServletRequest request) {
+        ErrorResponse error = new ErrorResponse()
+                .message(ex.getMessage())
+                .timestamp(OffsetDateTime.now(clock))
+                .path(request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
+        ErrorResponse error = new ErrorResponse()
+                .message("Authentication failed: Bad credentials")
+                .timestamp(OffsetDateTime.now(clock))
+                .path(request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    @ExceptionHandler(UsernameNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUsernameNotFound(UsernameNotFoundException ex,
+                                                                HttpServletRequest request) {
+        ErrorResponse error = new ErrorResponse()
+                .message("Authentication failed: User not found")
+                .timestamp(OffsetDateTime.now(clock))
+                .path(request.getRequestURI());
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
     private ResponseEntity<ErrorResponse> build(String message,
