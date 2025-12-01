@@ -27,7 +27,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserResponse'
+                $ref: '#/components/schemas/UserRegistrationResponse'
         '400':
           description: Invalid input
           content:
@@ -211,27 +211,29 @@ paths:
 
 components:
   schemas:
-    RegisterResponse:
+    UserRegistrationResponse:
       type: object
-      description: Response after successful registration
+      description: Response after successful user registration (without token)
       properties:
-        token:
+        id:
           type: string
-          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
-        type:
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        email:
           type: string
-          example: "Bearer"
-        expiresIn:
-          type: integer
-          format: int64
-          example: 86400
-        user:
-          $ref: '#/components/schemas/UserResponse'
+          format: email
+          example: "user@example.com"
+        firstName:
+          type: string
+          example: "John"
+        lastName:
+          type: string
+          example: "Doe"
       required:
-          - token
-          - type
-          - expiresIn
-          - user
+        - id
+        - email
+        - firstName
+        - lastName
 
     LoginRequest:
       type: object

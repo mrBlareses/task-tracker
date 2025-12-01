@@ -3,6 +3,7 @@ package org.mushroom.mapper;
 import org.mapstruct.*;
 import org.mushroom.entity.Role;
 import org.mushroom.entity.User;
+import org.mushroom.model.UserRegistrationResponse;
 import org.mushroom.model.UserResponse;
 import org.mushroom.model.UserUpdateRequest;
 
@@ -27,6 +28,13 @@ public interface UserMapper {
     @Mapping(target = "firstname", source = "firstName")
     @Mapping(target = "lastname", source = "lastName")
     void updateUserFromDto(UserUpdateRequest dto, @MappingTarget User entity);
+
+    @Mapping(target = "id", source = "id", qualifiedByName = "uuidToString")
+    @Mapping(target = "email", source = "email")
+    @Mapping(target = "firstName", source = "firstname")
+    @Mapping(target = "lastName", source = "lastname")
+    UserRegistrationResponse toRegistrationResponse(User user);
+
 
     @Named("rolesToAuthorityStrings")
     default List<String> rolesToAuthorityStrings(List<Role> roles) {

@@ -17,8 +17,8 @@ public class UserController implements UsersApi {
     private final UserService userService;
 
     @Override
-    public ResponseEntity<UserResponse> registerUser(UserRegistrationRequest request) {
-        UserResponse response = userService.registerUser(request);
+    public ResponseEntity<UserRegistrationResponse> registerUser(UserRegistrationRequest request) {
+        UserRegistrationResponse response = userService.registerUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

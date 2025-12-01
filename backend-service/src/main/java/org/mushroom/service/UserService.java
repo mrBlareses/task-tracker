@@ -29,7 +29,7 @@ public class UserService{
     private final Clock clock;
     private final PasswordEncoder passwordEncoder;
 
-    public UserResponse registerUser(UserRegistrationRequest request) {
+    public UserRegistrationResponse  registerUser(UserRegistrationRequest request) {
         try {
             User user = User.builder()
                     .email(request.getEmail())
@@ -47,7 +47,7 @@ public class UserService{
 
             User savedUser = userRepository.save(user);
 
-            return userMapper.toResponse(savedUser);
+            return userMapper.toRegistrationResponse(savedUser);
 
         } catch (DataIntegrityViolationException e) {
             throw ConflictException.duplicateUser();

@@ -14,7 +14,7 @@ import org.mushroom.exception.ForbiddenActionException;
 import org.mushroom.exception.NotFoundException;
 import org.mushroom.mapper.UserMapper;
 import org.mushroom.model.UserRegistrationRequest;
-import org.mushroom.model.UserResponse;
+import org.mushroom.model.UserRegistrationResponse;
 import org.mushroom.model.UserUpdateRequest;
 import org.mushroom.repository.UserRepository;
 import org.mushroom.service.UserService;
@@ -74,6 +74,7 @@ class UserServiceUnitTest {
                 .firstname("John")
                 .lastname("Doe")
                 .build();
+
         userEntity.getRoles().add(Role.builder().name(RoleType.USER).user(userEntity).build());
 
         when(passwordEncoder.encode("password")).thenReturn("encodedPassword");
@@ -81,13 +82,14 @@ class UserServiceUnitTest {
         when(clock.getZone()).thenReturn(ZoneId.systemDefault());
         when(userRepository.save(any(User.class))).thenReturn(userEntity);
 
-        UserResponse userResponse = new UserResponse()
+        UserRegistrationResponse responseDto = new UserRegistrationResponse()
                 .email(email)
                 .firstName("John")
                 .lastName("Doe");
-        when(userMapper.toResponse(userEntity)).thenReturn(userResponse);
 
-        UserResponse response = userService.registerUser(request);
+        when(userMapper.toRegistrationResponse(userEntity)).thenReturn(responseDto);
+
+        UserRegistrationResponse response = userService.registerUser(request);
 
         assertThat(response.getEmail()).isEqualTo(email);
         assertThat(response.getFirstName()).isEqualTo("John");
@@ -146,7 +148,7 @@ class UserServiceUnitTest {
                 () -> userService.updatedUser(otherUserId, request));
 
         assertThat(exception.getMessage())
-                .isEqualTo("You can only update your own profile");
+                .isEqualTo("You can only update your profile");
     }
 
     @Test
@@ -169,7 +171,7 @@ class UserServiceUnitTest {
                 () -> userService.deleteUser(otherUserId));
 
         assertThat(exception.getMessage())
-                .isEqualTo("You can only delete your own account");
+                .isEqualTo("You can only delete your account");
     }
 
     @Test
