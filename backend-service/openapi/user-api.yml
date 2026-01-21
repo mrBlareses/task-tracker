@@ -271,7 +271,8 @@ components:
           type: string
           example: "Bearer"
         expiresIn:
-          type: long
+          type: integer
+          format: int64
           example: 86400
 
     LogoutResponse:
