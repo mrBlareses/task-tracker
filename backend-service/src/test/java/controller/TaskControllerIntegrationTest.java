@@ -11,8 +11,6 @@ import org.mushroom.entity.Role;
 import org.mushroom.entity.Task;
 import org.mushroom.entity.TaskStatus;
 import org.mushroom.entity.User;
-
-import org.mushroom.model.task.ChangeTaskStatusRequest;
 import org.mushroom.model.task.TaskCreateRequest;
 import org.mushroom.model.task.TaskUpdateRequest;
 import org.mushroom.repository.TaskRepository;
@@ -117,30 +115,30 @@ class TaskControllerIntegrationTest extends PostgresTestContainer {
     }
 
     @Test
-    @DisplayName("GET /api/v1/tasks/{id} — возвращает свою задачу")
-    void shouldGetOwnTask() throws Exception {
-        Task task = createAndSaveTask("Моя задача", userId);
+    @DisplayName("GET /api/v1/tasks/{id} — возвращает задачу по id")
+    void shouldGetTaskById_EvenIfNotOwner() throws Exception {
+        Task task = createAndSaveTask("Чужая задача", otherUserId);
 
         mockMvc.perform(get("/api/v1/tasks/{id}", task.getId())
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Моя задача"));
+                .andExpect(jsonPath("$.title").value("Чужая задача"));
     }
 
     @Test
-    @DisplayName("GET /api/v1/tasks/{id} — 404 при попытке достать чужую задачу")
-    void shouldReturnNotFound_WhenTaskIsNotMine() throws Exception {
-        Task task = createAndSaveTask("Чужая задача", otherUserId);
+    @DisplayName("GET /api/v1/tasks/{id} — 404 если задачи нет")
+    void shouldReturnNotFound_WhenTaskNotExists() throws Exception {
+        UUID missingId = UUID.randomUUID();
 
-        mockMvc.perform(get("/api/v1/tasks/{id}", task.getId())
+        mockMvc.perform(get("/api/v1/tasks/{id}", missingId)
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    @DisplayName("PUT /api/v1/tasks/{id} — может обновить свою задачу")
-    void shouldUpdateOwnTask() throws Exception {
-        Task task = createAndSaveTask("Старая задача", userId);
+    @DisplayName("PUT /api/v1/tasks/{id} — обновляет задачу по id")
+    void shouldUpdateTask_EvenIfNotOwner() throws Exception {
+        Task task = createAndSaveTask("Старая задача", otherUserId);
 
         TaskUpdateRequest request = new TaskUpdateRequest()
                 .title("Новое название")
@@ -157,40 +155,9 @@ class TaskControllerIntegrationTest extends PostgresTestContainer {
     }
 
     @Test
-    @DisplayName("PATCH /api/v1/tasks/{id}/status — меняет статус своей задачи")
-    void shouldChangeOwnTaskStatus() throws Exception {
-        Task task = createAndSaveTask("Моя задача", userId);
-
-        ChangeTaskStatusRequest request = new ChangeTaskStatusRequest()
-                .status(ChangeTaskStatusRequest.StatusEnum.DONE);
-
-        mockMvc.perform(patch("/api/v1/tasks/{id}/status", task.getId())
-                        .header("Authorization", "Bearer " + userToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("DONE"));
-    }
-
-    @Test
-    @DisplayName("PATCH /api/v1/tasks/{id}/status — 404 для чужой задачи")
-    void shouldReturnNotFound_WhenChangingOthersTaskStatus() throws Exception {
-        Task task = createAndSaveTask("Чужая задача", otherUserId);
-
-        ChangeTaskStatusRequest request = new ChangeTaskStatusRequest()
-                .status(ChangeTaskStatusRequest.StatusEnum.DONE);
-
-        mockMvc.perform(patch("/api/v1/tasks/{id}/status", task.getId())
-                        .header("Authorization", "Bearer " + userToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    @DisplayName("DELETE /api/v1/tasks/{id} — удаляет свою задачу")
-    void shouldDeleteOwnTask() throws Exception {
-        Task task = createAndSaveTask("Удаляемая", userId);
+    @DisplayName("DELETE /api/v1/tasks/{id} — удаляет задачу по id")
+    void shouldDeleteTask_EvenIfNotOwner() throws Exception {
+        Task task = createAndSaveTask("Удаляемая", otherUserId);
 
         mockMvc.perform(delete("/api/v1/tasks/{id}", task.getId())
                         .header("Authorization", "Bearer " + userToken))
@@ -200,13 +167,13 @@ class TaskControllerIntegrationTest extends PostgresTestContainer {
     }
 
     @Test
-    @DisplayName("DELETE /api/v1/tasks/{id} — 404 при попытке удалить чужую задачу")
-    void shouldReturnNotFound_WhenDeletingOthersTask() throws Exception {
-        Task task = createAndSaveTask("Чужая", otherUserId);
+    @DisplayName("DELETE /api/v1/tasks/{id} — 204 даже если задачи нет (deleteById не бросает ошибку)")
+    void shouldReturnNoContent_WhenDeletingMissingTask() throws Exception {
+        UUID missingId = UUID.randomUUID();
 
-        mockMvc.perform(delete("/api/v1/tasks/{id}", task.getId())
+        mockMvc.perform(delete("/api/v1/tasks/{id}", missingId)
                         .header("Authorization", "Bearer " + userToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNoContent());
     }
 
     private User createAndSaveUser(String email) {

@@ -28,9 +28,8 @@ public class TaskService {
     private final TaskMapper taskMapper;
     private final UserService userService;
 
-    @Transactional
     public TaskResponse createTask(TaskCreateRequest request) {
-        User currentUser = getCurrentUser();
+        User currentUser = userService.getCurrentUser();
         OffsetDateTime now = OffsetDateTime.now(clock);
 
         Task task = taskMapper.toEntity(request);
@@ -42,58 +41,36 @@ public class TaskService {
         return taskMapper.toResponse(savedTask);
     }
 
-    @Transactional
     public TaskResponse changeTaskStatus(UUID id, ChangeTaskStatusRequest request) {
-        Task task = getOwnTaskByIdWithLock(id);
+        Task task = getTaskByIdOrThrow(id);
 
         TaskStatus newStatus = TaskStatus.valueOf(request.getStatus().getValue());
         task.setStatus(newStatus);
         task.setUpdatedAt(OffsetDateTime.now(clock));
 
-        Task updatedTask = taskRepository.save(task);
-        return taskMapper.toResponse(updatedTask);
+        Task saved = taskRepository.save(task);
+        return taskMapper.toResponse(saved);
     }
 
-    @Transactional
     public void deleteTask(UUID id) {
-        Task task = getOwnTaskByIdWithLock(id);
-        taskRepository.delete(task);
+        taskRepository.deleteById(id);
     }
 
-    @Transactional(readOnly = true)
     public Task getTaskById(UUID id) {
-        return getOwnTaskById(id);
+        return getTaskByIdOrThrow(id);
     }
 
     @Transactional
     public TaskResponse updateTask(UUID id, TaskUpdateRequest request) {
-        Task existing = getOwnTaskByIdWithLock(id);
-
+        Task existing = getTaskByIdOrThrow(id);
         taskMapper.updateEntity(existing, request);
         existing.setUpdatedAt(OffsetDateTime.now(clock));
-
         Task updatedTask = taskRepository.save(existing);
         return taskMapper.toResponse(updatedTask);
     }
 
-    private User getCurrentUser() {
-        return userService.getCurrentUser();
-    }
-
-    private Task getOwnTaskById(UUID id) {
-        User currentUser = getCurrentUser();
-        return taskRepository.findByIdAndUserId(id, currentUser.getId())
-                .orElseThrow(() ->
-                        new NotFoundException("Task not found or access denied: " + id)
-                );
-    }
-
-    private Task getOwnTaskByIdWithLock(UUID id) {
-        UUID userId = getCurrentUser().getId();
-
-        return taskRepository.findByIdAndUserIdWithLock(id, userId)
-                .orElseThrow(() ->
-                        new NotFoundException("Task not found or access denied: " + id)
-                );
+    private Task getTaskByIdOrThrow(UUID id) {
+        return taskRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Task not found: " + id));
     }
 }
