@@ -59,7 +59,8 @@ public class TaskService {
     }
 
     public Task getTaskById(UUID id) {
-        return getExistingTask(id);
+        return taskRepository.findById(id)
+                .orElseThrow(() -> new IllegalStateException("Task was validated but not found"));
     }
 
     @Transactional
@@ -79,10 +80,5 @@ public class TaskService {
                 OffsetDateTime.now(clock)
         ).orElseThrow(() -> new NotFoundException("Task not found: " + id));
         return taskMapper.toResponse(updated);
-    }
-
-    private Task getExistingTask(UUID id) {
-        return taskRepository.findById(id)
-                .orElseThrow(() -> new IllegalStateException("Task was validated but not found"));
     }
 }
