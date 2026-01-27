@@ -11,7 +11,6 @@ import org.mushroom.model.task.TaskUpdateRequest;
 import org.mushroom.repository.TaskRepository;
 import org.mushroom.util.ValidationUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
@@ -49,7 +48,6 @@ public class TaskService {
                 .orElseThrow(() -> new IllegalStateException("Task was validated but not found"));
     }
 
-    @Transactional
     public TaskResponse updateTask(UUID id, TaskUpdateRequest request) {
         String title = ValidationUtils
                 .trimOrBadRequestIfBlank(request.getTitle(), "title");
