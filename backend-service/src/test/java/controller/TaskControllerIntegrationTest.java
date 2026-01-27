@@ -19,6 +19,7 @@ import org.mushroom.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -146,11 +147,13 @@ class TaskControllerIntegrationTest extends PostgresTestContainer {
                 .status(TaskUpdateRequest.StatusEnum.DONE);
 
         mockMvc.perform(put("/api/v1/tasks/{id}", task.getId())
-                        .header("Authorization", "Bearer " + userToken)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(task.getId().toString()))
                 .andExpect(jsonPath("$.title").value("Новое название"))
+                .andExpect(jsonPath("$.description").value("Новое описание"))
                 .andExpect(jsonPath("$.status").value("DONE"));
     }
 

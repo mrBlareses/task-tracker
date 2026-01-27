@@ -18,6 +18,7 @@ import org.mushroom.service.UserService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import java.time.*;
 import java.util.Optional;
 import java.util.UUID;
@@ -104,22 +105,27 @@ class TaskServiceUnitTest {
                 .title("new title")
                 .description("new desc");
 
-        Task existing = Task.builder()
+        Task returned = Task.builder()
                 .id(taskId)
-                .updatedAt(OffsetDateTime.now().minusDays(1))
+                .title("new title")
+                .description("new desc")
+                .updatedAt(fixedNow)
                 .build();
 
-        Task saved = Task.builder().id(taskId).build();
         TaskResponse response = new TaskResponse().id(taskId);
 
-        when(taskRepository.findById(taskId)).thenReturn(Optional.of(existing));
-        when(taskRepository.save(existing)).thenReturn(saved);
-        when(taskMapper.toResponse(saved)).thenReturn(response);
+        when(taskRepository.update(
+                eq("new title"),
+                eq("new desc"),
+                isNull(),
+                eq(fixedNow)
+        )).thenReturn(Optional.of(returned));
+
+        when(taskMapper.toResponse(returned)).thenReturn(response);
 
         TaskResponse actual = taskService.updateTask(taskId, request);
 
         assertThat(actual).isEqualTo(response);
-        assertThat(existing.getUpdatedAt()).isEqualTo(fixedNow);
     }
 
     @Test
@@ -144,22 +150,25 @@ class TaskServiceUnitTest {
         ChangeTaskStatusRequest request = new ChangeTaskStatusRequest()
                 .status(ChangeTaskStatusRequest.StatusEnum.DONE);
 
-        Task existing = Task.builder()
+        Task returned = Task.builder()
                 .id(taskId)
-                .status(TaskStatus.TODO)
+                .status(TaskStatus.DONE)
+                .updatedAt(fixedNow)
                 .build();
-        Task saved = existing;
 
         TaskResponse response = new TaskResponse().id(taskId);
 
-        when(taskRepository.findById(taskId)).thenReturn(Optional.of(existing));
-        when(taskRepository.save(existing)).thenReturn(saved);
-        when(taskMapper.toResponse(saved)).thenReturn(response);
+        when(taskRepository.update(
+                isNull(),
+                isNull(),
+                eq("DONE"),
+                eq(fixedNow)
+        )).thenReturn(Optional.of(returned));
+
+        when(taskMapper.toResponse(returned)).thenReturn(response);
 
         TaskResponse actual = taskService.changeTaskStatus(taskId, request);
 
         assertThat(actual).isEqualTo(response);
-        assertThat(existing.getStatus()).isEqualTo(TaskStatus.DONE);
-        assertThat(existing.getUpdatedAt()).isEqualTo(OffsetDateTime.now(clock));
     }
 }

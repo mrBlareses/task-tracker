@@ -2,7 +2,6 @@ package org.mushroom.service;
 
 import lombok.RequiredArgsConstructor;
 import org.mushroom.entity.Task;
-import org.mushroom.entity.TaskStatus;
 import org.mushroom.entity.User;
 import org.mushroom.exception.NotFoundException;
 import org.mushroom.mapper.TaskMapper;
@@ -11,6 +10,7 @@ import org.mushroom.model.task.TaskCreateRequest;
 import org.mushroom.model.task.TaskResponse;
 import org.mushroom.model.task.TaskUpdateRequest;
 import org.mushroom.repository.TaskRepository;
+import org.mushroom.util.ValidationUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,14 +42,16 @@ public class TaskService {
     }
 
     public TaskResponse changeTaskStatus(UUID id, ChangeTaskStatusRequest request) {
-        Task task = getTaskByIdOrThrow(id);
+        String status = request.getStatus().getValue();
 
-        TaskStatus newStatus = TaskStatus.valueOf(request.getStatus().getValue());
-        task.setStatus(newStatus);
-        task.setUpdatedAt(OffsetDateTime.now(clock));
+        Task updated = taskRepository.update(
+                null,
+                null,
+                status,
+                OffsetDateTime.now(clock)
+        ).orElseThrow(() -> new NotFoundException("Task not found: " + id));
 
-        Task saved = taskRepository.save(task);
-        return taskMapper.toResponse(saved);
+        return taskMapper.toResponse(updated);
     }
 
     public void deleteTask(UUID id) {
@@ -57,20 +59,30 @@ public class TaskService {
     }
 
     public Task getTaskById(UUID id) {
-        return getTaskByIdOrThrow(id);
+        return getExistingTask(id);
     }
 
     @Transactional
     public TaskResponse updateTask(UUID id, TaskUpdateRequest request) {
-        Task existing = getTaskByIdOrThrow(id);
-        taskMapper.updateEntity(existing, request);
-        existing.setUpdatedAt(OffsetDateTime.now(clock));
-        Task updatedTask = taskRepository.save(existing);
-        return taskMapper.toResponse(updatedTask);
+        String title = ValidationUtils
+                .trimOrBadRequestIfBlank(request.getTitle(), "title");
+
+        String description = ValidationUtils
+                .trimOrBadRequestIfBlank(request.getDescription(), "description");
+
+        String status = request.getStatus() != null ? request.getStatus().name() : null;
+
+        Task updated = taskRepository.update(
+                title,
+                description,
+                status,
+                OffsetDateTime.now(clock)
+        ).orElseThrow(() -> new NotFoundException("Task not found: " + id));
+        return taskMapper.toResponse(updated);
     }
 
-    private Task getTaskByIdOrThrow(UUID id) {
+    private Task getExistingTask(UUID id) {
         return taskRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Task not found: " + id));
+                .orElseThrow(() -> new IllegalStateException("Task was validated but not found"));
     }
 }
