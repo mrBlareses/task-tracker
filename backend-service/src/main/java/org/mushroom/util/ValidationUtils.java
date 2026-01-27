@@ -1,18 +1,26 @@
 package org.mushroom.util;
 
-import lombok.RequiredArgsConstructor;
 import org.mushroom.exception.BadRequestException;
 
-@RequiredArgsConstructor
-public class ValidationUtils {
-    public static String trimOrBadRequestIfBlank(String value, String fieldName) {
-        if (value == null) {
+public final class ValidationUtils {
+
+    public static String validateAndSanitizeTitle(String title) {
+        if (title == null) {
             return null;
         }
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            throw new BadRequestException(fieldName + " must not be blank");
+        if (title.isEmpty()) {
+            throw new BadRequestException(" must not be blank");
         }
-        return trimmed;
+        return title.trim();
+    }
+
+    public static  String validateAndSanitizeDescription(String description){
+        if (description == null) {
+            return null;
+        }
+        if (description.isBlank()) {
+            throw new BadRequestException("description must not be blank");
+        }
+        return description.trim();
     }
 }

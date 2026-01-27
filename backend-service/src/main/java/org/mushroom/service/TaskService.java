@@ -9,13 +9,14 @@ import org.mushroom.model.task.TaskCreateRequest;
 import org.mushroom.model.task.TaskResponse;
 import org.mushroom.model.task.TaskUpdateRequest;
 import org.mushroom.repository.TaskRepository;
-import org.mushroom.util.ValidationUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import static org.mushroom.util.ValidationUtils.validateAndSanitizeDescription;
+import static org.mushroom.util.ValidationUtils.validateAndSanitizeTitle;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class TaskService {
     private final Clock clock;
     private final TaskMapper taskMapper;
     private final UserService userService;
-
+ 
     public TaskResponse createTask(TaskCreateRequest request) {
         User currentUser = userService.getCurrentUser();
         OffsetDateTime now = OffsetDateTime.now(clock);
@@ -49,11 +50,8 @@ public class TaskService {
     }
 
     public TaskResponse updateTask(UUID id, TaskUpdateRequest request) {
-        String title = ValidationUtils
-                .trimOrBadRequestIfBlank(request.getTitle(), "title");
-
-        String description = ValidationUtils
-                .trimOrBadRequestIfBlank(request.getDescription(), "description");
+        String title = validateAndSanitizeTitle(request.getTitle());
+        String description = validateAndSanitizeDescription(request.getDescription());
 
         String status = request.getStatus() != null ? request.getStatus().name() : null;
 
