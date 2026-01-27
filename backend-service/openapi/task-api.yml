@@ -191,7 +191,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ChangeTaskStatusRequest'
+              $ref: '#/components/schemas/TaskUpdateRequest'
       responses:
         '200':
           description: Status changed successfully
@@ -281,7 +281,7 @@ components:
           type: string
           enum: [TODO, IN_PROGRESS, DONE]
 
-    ErrorResponse:
+    TaskErrorResponse:
       type: object
       properties:
         message:
@@ -298,13 +298,13 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/TaskErrorResponse'
     BadRequest:
       description: Invalid request
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/TaskErrorResponse'
 
   securitySchemes:
     bearerAuth:
