@@ -8,7 +8,6 @@ import org.mushroom.mapper.TaskMapper;
 import org.mushroom.model.task.TaskResponse;
 import org.mushroom.model.task.TaskCreateRequest;
 import org.mushroom.model.task.TaskUpdateRequest;
-import org.mushroom.model.task.ChangeTaskStatusRequest;
 import org.mushroom.service.TaskService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,15 +38,6 @@ public class TaskController implements TasksApi {
     @Override
     public ResponseEntity<TaskResponse> updateTask(UUID id, @Valid TaskUpdateRequest taskUpdateRequest) {
         TaskResponse response = taskService.updateTask(id, taskUpdateRequest);
-        return ResponseEntity.ok(response);
-    }
-
-    @Override
-    public ResponseEntity<TaskResponse> changeTaskStatus(
-            UUID id,
-            @Valid ChangeTaskStatusRequest changeTaskStatusRequest) {
-
-        TaskResponse response = taskService.changeTaskStatus(id, changeTaskStatusRequest);
         return ResponseEntity.ok(response);
     }
 

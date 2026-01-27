@@ -5,7 +5,6 @@ import org.mushroom.entity.Task;
 import org.mushroom.entity.User;
 import org.mushroom.exception.NotFoundException;
 import org.mushroom.mapper.TaskMapper;
-import org.mushroom.model.task.ChangeTaskStatusRequest;
 import org.mushroom.model.task.TaskCreateRequest;
 import org.mushroom.model.task.TaskResponse;
 import org.mushroom.model.task.TaskUpdateRequest;
@@ -39,19 +38,6 @@ public class TaskService {
 
         Task savedTask = taskRepository.save(task);
         return taskMapper.toResponse(savedTask);
-    }
-
-    public TaskResponse changeTaskStatus(UUID id, ChangeTaskStatusRequest request) {
-        String status = request.getStatus().getValue();
-
-        Task updated = taskRepository.update(
-                null,
-                null,
-                status,
-                OffsetDateTime.now(clock)
-        ).orElseThrow(() -> new NotFoundException("Task not found: " + id));
-
-        return taskMapper.toResponse(updated);
     }
 
     public void deleteTask(UUID id) {

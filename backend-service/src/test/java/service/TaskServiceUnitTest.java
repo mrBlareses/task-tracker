@@ -5,16 +5,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mushroom.entity.Task;
-import org.mushroom.entity.TaskStatus;
 import org.mushroom.entity.User;
 import org.mushroom.exception.NotFoundException;
 import org.mushroom.mapper.TaskMapper;
-import org.mushroom.model.task.ChangeTaskStatusRequest;
 import org.mushroom.model.task.TaskResponse;
 import org.mushroom.model.task.TaskUpdateRequest;
 import org.mushroom.repository.TaskRepository;
 import org.mushroom.service.TaskService;
-import org.mushroom.service.UserService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,9 +30,6 @@ class TaskServiceUnitTest {
 
     @Mock
     private TaskRepository taskRepository;
-
-    @Mock
-    private UserService userService;
 
     @InjectMocks
     private TaskService taskService;
@@ -140,35 +134,5 @@ class TaskServiceUnitTest {
         );
 
         assertThat(ex.getMessage()).contains(taskId.toString());
-    }
-
-    @Test
-    @DisplayName("changeTaskStatus — меняет статус и возвращает обновлённую задачу")
-    void changeTaskStatus_ShouldReturnUpdatedTask() {
-        mockTimezone();
-
-        ChangeTaskStatusRequest request = new ChangeTaskStatusRequest()
-                .status(ChangeTaskStatusRequest.StatusEnum.DONE);
-
-        Task returned = Task.builder()
-                .id(taskId)
-                .status(TaskStatus.DONE)
-                .updatedAt(fixedNow)
-                .build();
-
-        TaskResponse response = new TaskResponse().id(taskId);
-
-        when(taskRepository.update(
-                isNull(),
-                isNull(),
-                eq("DONE"),
-                eq(fixedNow)
-        )).thenReturn(Optional.of(returned));
-
-        when(taskMapper.toResponse(returned)).thenReturn(response);
-
-        TaskResponse actual = taskService.changeTaskStatus(taskId, request);
-
-        assertThat(actual).isEqualTo(response);
     }
 }
