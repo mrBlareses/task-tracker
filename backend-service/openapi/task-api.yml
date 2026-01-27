@@ -281,15 +281,6 @@ components:
           type: string
           enum: [TODO, IN_PROGRESS, DONE]
 
-    ChangeTaskStatusRequest:
-      type: object
-      required:
-        - status
-      properties:
-        status:
-          type: string
-          enum: [ TODO, IN_PROGRESS, DONE ]
-
     ErrorResponse:
       type: object
       properties:
