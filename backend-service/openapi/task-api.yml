@@ -138,7 +138,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TaskPatchRequest'
+              $ref: '#/components/schemas/TaskUpdateRequest'
       responses:
         '200':
           description: Task partially updated
@@ -269,20 +269,6 @@ components:
     TaskUpdateRequest:
       type: object
       required: [title, status]
-      properties:
-        title:
-          type: string
-          minLength: 1
-          maxLength: 255
-        description:
-          type: string
-          nullable: true
-        status:
-          type: string
-          enum: [TODO, IN_PROGRESS, DONE]
-
-    TaskPatchRequest:
-      type: object
       properties:
         title:
           type: string
