@@ -1,4 +1,4 @@
-# IoT Microservice Platform
+# TASK TRACKER Microservice Platform
 
 ## Содержание
 - [Архитектура](#архитектура)
