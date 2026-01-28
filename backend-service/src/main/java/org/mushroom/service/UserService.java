@@ -99,5 +99,10 @@ public class UserService{
 
         return userMapper.toResponse(userRepository.save(user));
     }
+
+    public User getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (User) auth.getPrincipal();
+    }
 }
 

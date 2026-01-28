@@ -26,6 +26,8 @@ repositories {
     mavenCentral()
 }
 
+ext["testcontainers.version"] = "1.21.0"
+
 dependencies {
     // Spring Boot starters
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -46,6 +48,9 @@ dependencies {
 
     // OpenAPI / Swagger UI
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+    implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
+    implementation 'io.swagger.core.v3:swagger-annotations:2.2.20'
+
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -56,6 +61,7 @@ dependencies {
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.2'
     annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
 
+
     // ===== .env =====
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 
@@ -64,10 +70,9 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
 
     // Testcontainers
-    testImplementation platform('org.testcontainers:testcontainers-bom:1.20.3')
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testImplementation 'org.testcontainers:postgresql'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation enforcedPlatform("org.testcontainers:testcontainers-bom:1.21.3")
+    testImplementation "org.testcontainers:junit-jupiter"
+    testImplementation "org.testcontainers:postgresql"
 }
 
 // ============ OPENAPI GENERATION ============
@@ -111,6 +116,40 @@ tasks.register('generateUserApi', org.openapitools.generator.gradle.plugin.tasks
     }
 }
 
+tasks.register('generateTaskApi', org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    group = 'OpenAPI'
+    description = 'Generate Task API from OpenAPI spec'
+
+    dependsOn createOpenApiDir
+
+    generatorName = 'spring'
+    inputSpec = "${projectDir}/openapi/task-api.yml"
+    outputDir = "${buildDir}/generated/task-api"
+
+    configOptions = [
+            useSpringBoot3    : "true",
+            useTags           : "true",
+            useBeanValidation : "true",
+            openApiNullable   : "false",
+            interfaceOnly     : "true",
+            apiPackage        : "org.mushroom.api.task",
+            modelPackage      : "org.mushroom.model.task",
+            configPackage     : "org.mushroom.openapi.config.task",
+            useLombok         : "true",
+            lombokBuilder     : "true",
+            modelLombok       : "true",
+            modelLombokBuilder: "true"
+    ]
+
+    doFirst {
+        logger.lifecycle("Generating Task API from: ${inputSpec}")
+    }
+
+    doLast {
+        logger.lifecycle("Task API generated to: ${outputDir}")
+    }
+}
+
 // ============ MAPSTRUCT CONFIGURATION ============
 tasks.withType(JavaCompile).configureEach {
     options.annotationProcessorPath = configurations.annotationProcessor
@@ -118,6 +157,7 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.named('compileJava') {
     dependsOn tasks.named('generateUserApi')
+    dependsOn tasks.named('generateTaskApi')
 
     options.annotationProcessorPath = configurations.annotationProcessor
 }
@@ -128,6 +168,7 @@ sourceSets {
             srcDirs = [
                     'src/main/java',
                     "${buildDir}/generated/user-api/src/main/java",
+                    "${buildDir}/generated/task-api/src/main/java",
                     "${buildDir}/generated/sources/annotationProcessor/java/main"
             ]
         }
@@ -155,6 +196,18 @@ tasks.register('cleanOpenApi', Delete) {
     group = 'OpenAPI'
     description = 'Clean generated OpenAPI code'
     delete "${buildDir}/generated"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += [
+            '-Amapstruct.defaultComponentModel=spring',
+            '-Amapstruct.unmappedTargetPolicy=IGNORE',
+            '-Amapstruct.suppressGeneratorTimestamp=true'
+    ]
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
 }
 
 clean {

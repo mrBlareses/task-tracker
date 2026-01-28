@@ -32,7 +32,7 @@ public class User implements UserDetails{
     private OffsetDateTime updatedAt;
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    private final List<Role> roles = new ArrayList<>();
+    private final Set<Role> roles = new HashSet<>();
 
     @Override
     public boolean equals(Object o) {

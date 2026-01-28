@@ -1,18 +1,23 @@
 server:
   port: 8081
+
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/task_tracker
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: validate
     show-sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
   liquibase:
     change-log: classpath:db.changelog/changelog-master.xml
     enabled: true
+
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:secret}
   expiration: ${JWT_EXPIRATION:86400000}
