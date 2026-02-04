@@ -15,7 +15,7 @@ paths:
       tags:
         - ServiceAnalytics
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       responses:
         '200':
           description: Daily analytics successfully built
@@ -41,8 +41,6 @@ components:
     DailyAnalyticsResponse:
       type: object
       required:
-        - from
-        - to
         - summaries
       properties:
         from:
@@ -56,9 +54,9 @@ components:
         summaries:
           type: array
           items:
-            $ref: '#/components/schemas/UserDailyReport'
+            $ref: '#/components/schemas/DailyReport'
 
-    UserDailyReport:
+    DailyReport:
       type: object
       required:
         - userId

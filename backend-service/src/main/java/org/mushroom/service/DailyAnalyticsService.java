@@ -4,6 +4,7 @@ package org.mushroom.service;
 import lombok.RequiredArgsConstructor;
 import org.mushroom.exception.AnalyticsBuildException;
 import org.mushroom.repository.TaskRepository;
+import org.mushroom.service.model.DailyReport;
 import org.mushroom.service.model.UserDailyReport;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
@@ -31,21 +32,21 @@ public class DailyAnalyticsService {
                 .atOffset(offset);
         OffsetDateTime from = to.minusDays(1);
 
-        final List<UserDailyReport> summaries;
+        final List<DailyReport> summaries;
         try {
             summaries = taskRepository.getDailyReports().stream()
-                    .map(r -> new UserDailyReport(
+                    .map(r -> new DailyReport(
                             r.getUserId(),
                             r.getEmail(),
                             r.getPendingCount(),
                             r.getCompletedCount()
                     ))
-                    .sorted(Comparator.comparing(UserDailyReport::getUserId))
+                    .sorted(Comparator.comparing(DailyReport::getUserId))
                     .toList();
         } catch (DataAccessException e) {
             throw new AnalyticsBuildException("Failed to build daily analytics", e);
         }
-        return new DailyAnalyticsResponse(from, to, summaries);
+        return new DailyAnalyticsResponse(summaries);
     }
 }
 
