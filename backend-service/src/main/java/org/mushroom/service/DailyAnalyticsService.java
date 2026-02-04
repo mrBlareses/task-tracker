@@ -26,13 +26,11 @@ public class DailyAnalyticsService {
                             r.getEmail(),
                             r.getPendingCount(),
                             r.getCompletedCount()
-                    ))
-                    .sorted(Comparator.comparing(DailyReport::getUserId))
-                    .toList();
+                    )).toList();
+            return new DailyAnalyticsResponse(summaries);
         } catch (DataAccessException e) {
             throw new AnalyticsBuildException("Failed to build daily analytics", e);
         }
-        return new DailyAnalyticsResponse(summaries);
     }
 }
 
