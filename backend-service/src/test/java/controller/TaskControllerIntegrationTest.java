@@ -138,7 +138,7 @@ class TaskControllerIntegrationTest extends PostgresTestContainer {
 
     @Test
     @DisplayName("PUT /api/v1/tasks/{id} — обновляет задачу по id")
-    void shouldUpdateTask_EvenIfNotOwner() throws Exception {
+    void shouldUpdateTask_ById() throws Exception {
         Task task = createAndSaveTask("Старая задача", otherUserId);
 
         TaskUpdateRequest request = new TaskUpdateRequest()

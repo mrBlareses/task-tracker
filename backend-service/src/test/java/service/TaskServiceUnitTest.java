@@ -109,6 +109,7 @@ class TaskServiceUnitTest {
         TaskResponse response = new TaskResponse().id(taskId);
 
         when(taskRepository.update(
+                eq(taskId),
                 eq("new title"),
                 eq("new desc"),
                 isNull(),
@@ -125,8 +126,17 @@ class TaskServiceUnitTest {
     @Test
     @DisplayName("updateTask — бросает NotFoundException если задачи нет")
     void updateTask_ShouldThrowNotFound() {
+        mockTimezone();
+
         TaskUpdateRequest request = new TaskUpdateRequest().title("x");
-        when(taskRepository.findById(taskId)).thenReturn(Optional.empty());
+
+        when(taskRepository.update(
+                eq(taskId),
+                any(),
+                any(),
+                any(),
+                any()
+        )).thenReturn(Optional.empty());
 
         NotFoundException ex = assertThrows(
                 NotFoundException.class,
