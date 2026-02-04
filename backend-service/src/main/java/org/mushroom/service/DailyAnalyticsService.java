@@ -33,7 +33,7 @@ public class DailyAnalyticsService {
 
         final List<UserDailyReport> summaries;
         try {
-            summaries = taskRepository.getDailyReports(from, to).stream()
+            summaries = taskRepository.getDailyReports().stream()
                     .map(r -> new UserDailyReport(
                             r.getUserId(),
                             r.getEmail(),

@@ -48,7 +48,7 @@ class DailyAnalyticsServiceUnitTest {
         DailyReportRow row2 = row(id2, "b@test.com", 5L, 1L);
         DailyReportRow row1 = row(id1, "a@test.com", 2L, 3L);
 
-        when(taskRepository.getDailyReports(any(), any()))
+        when(taskRepository.getDailyReports())
                 .thenReturn(List.of(row2, row1));
 
         DailyAnalyticsResponse response = dailyAnalyticsService.getDailyAnalytics();
@@ -72,7 +72,7 @@ class DailyAnalyticsServiceUnitTest {
         when(clock.instant()).thenReturn(Instant.parse("2026-02-02T08:00:00Z"));
         when(clock.getZone()).thenReturn(ZoneId.of("Europe/Moscow"));
 
-        when(taskRepository.getDailyReports(any(), any()))
+        when(taskRepository.getDailyReports())
                 .thenThrow(new DataAccessResourceFailureException("db down"));
 
         AnalyticsBuildException ex = assertThrows(

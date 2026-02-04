@@ -27,24 +27,22 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
                           @Param("status") String status,
                           @Param("updatedAt") OffsetDateTime updatedAt);
 
-            @Query(value = """
+    @Query(value = """
             SELECT
                  u.id    AS userId,
                  u.email AS email,
                  COUNT(t.id) FILTER (
             WHERE t.status <> 'DONE'
-                       ) AS pendingCount,
-                COUNT(t.id) FILTER (
+                    ) AS pendingCount,
+                  COUNT(t.id) FILTER (
             WHERE t.status = 'DONE'
             AND t.updated_at >= CURRENT_DATE
             AND t.updated_at <  CURRENT_DATE + INTERVAL '1 day'
-                       ) AS completedCount
+                     ) AS completedCount
             FROM users u
             LEFT JOIN tasks t ON t.user_id = u.id
             GROUP BY u.id, u.email
-    """, nativeQuery = true)
+            """, nativeQuery = true)
     List<DailyReportRow> getDailyReports(
-            @Param("from") OffsetDateTime from,
-            @Param("to") OffsetDateTime to
     );
 }
