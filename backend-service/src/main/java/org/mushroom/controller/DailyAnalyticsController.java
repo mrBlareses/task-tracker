@@ -16,7 +16,7 @@ public class DailyAnalyticsController implements ServiceAnalyticsApi {
 
     @Override
     public ResponseEntity<DailyAnalyticsResponse> getDailyAnalytics() {
-        DailyAnalyticsResponse response = dailyAnalyticsService.getDailyAnalytics();
-        return ResponseEntity.ok(response);
+        dailyAnalyticsService.getDailyAnalytics();
+        return ResponseEntity.accepted().build();
     }
 }
