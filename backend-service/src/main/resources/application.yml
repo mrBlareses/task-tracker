@@ -18,6 +18,21 @@ spring:
     change-log: classpath:db.changelog/changelog-master.xml
     enabled: true
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:9093}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
 jwt:
   secret: ${JWT_SECRET:secret}
   expiration: ${JWT_EXPIRATION:86400000}
+
+app:
+  kafka:
+    topics:
+      daily-report: daily-report
+      user-registered: user-registered

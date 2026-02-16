@@ -51,6 +51,8 @@ dependencies {
     implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
     implementation 'io.swagger.core.v3:swagger-annotations:2.2.20'
 
+    //KAFKA
+    implementation 'org.springframework.kafka:spring-kafka'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'

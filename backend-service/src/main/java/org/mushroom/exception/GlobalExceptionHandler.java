@@ -93,7 +93,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAllExceptions(Exception ex,
-                                                       HttpServletRequest req) {
+                                                             HttpServletRequest req) {
 
         String message = "Internal server error: " + ex.getMessage();
         return build(message, req, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -126,19 +126,6 @@ public class GlobalExceptionHandler {
                 .path(request.getRequestURI());
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
-    }
-
-    @ExceptionHandler(AnalyticsBuildException.class)
-    public ResponseEntity<ErrorResponse> handleAnalyticsBuild(
-            AnalyticsBuildException ex,
-            HttpServletRequest request
-    ) {
-        ErrorResponse body = new ErrorResponse()
-                .message("Daily analytics is temporarily unavailable")
-                .timestamp(OffsetDateTime.now())
-                .path(request.getRequestURI());
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 
     private ResponseEntity<ErrorResponse> build(String message,

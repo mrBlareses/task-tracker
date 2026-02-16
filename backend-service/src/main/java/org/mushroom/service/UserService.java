@@ -9,6 +9,7 @@ import org.mushroom.exception.ForbiddenActionException;
 import org.mushroom.exception.NotFoundException;
 import org.mushroom.mapper.UserMapper;
 import org.mushroom.model.*;
+import org.mushroom.reports.UserRegisteredReport;
 import org.mushroom.repository.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
@@ -23,13 +24,14 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UserService{
+public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final Clock clock;
     private final PasswordEncoder passwordEncoder;
+    private final RegistrationAnalyticsService registrationAnalyticsService;
 
-    public UserRegistrationResponse  registerUser(UserRegistrationRequest request) {
+    public UserRegistrationResponse registerUser(UserRegistrationRequest request) {
         try {
             User user = User.builder()
                     .email(request.getEmail())
@@ -46,6 +48,14 @@ public class UserService{
                     .build());
 
             User savedUser = userRepository.save(user);
+
+            registrationAnalyticsService.publishRegistrationEvent(new UserRegisteredReport(
+                    savedUser.getId(),
+                    savedUser.getEmail(),
+                    savedUser.getFirstname(),
+                    savedUser.getLastname(),
+                    savedUser.getCreatedAt()
+            ));
 
             return userMapper.toRegistrationResponse(savedUser);
 
