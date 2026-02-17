@@ -23,15 +23,21 @@ public class EventPublisher {
     }
 
     public void publishUserRegistrationEvent(UserRegisteredReport event) {
-        String key = event.userId().toString();
-
-        log.info("Publishing user-registered, key={}, email={}",
-                key, event.email());
+        String key = event.email();
 
         kafkaTemplate.send(
                 userRegisteredTopic,
                 key,
                 new KafkaEvent<>(event)
-        );
+        ).whenComplete((result, ex) -> {
+            if (ex != null) {
+                log.error(
+                        "Failed to publish user-registered event, key={}, email={}",
+                        key,
+                        event.email(),
+                        ex
+                );
+            }
+        });
     }
 }
