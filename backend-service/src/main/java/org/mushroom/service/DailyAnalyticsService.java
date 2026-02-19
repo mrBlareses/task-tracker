@@ -20,7 +20,6 @@ public class DailyAnalyticsService {
     public void collectAndSendDailyAnalytics() {
         for (DailyReportRow report : taskRepository.getDailyReports()) {
             eventPublisher.publishDailyAnalyticsEvent(report);
-            log.warn("published daily analytics for user {}", report.getUserId());
         }
     }
 }
