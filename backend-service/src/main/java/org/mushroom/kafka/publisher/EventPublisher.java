@@ -7,6 +7,7 @@ import org.mushroom.reports.DailyReportRow;
 import org.mushroom.reports.UserRegisteredReport;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 @Slf4j
 @Component
@@ -15,11 +16,29 @@ public class EventPublisher {
 
     private final KafkaTemplate<String, KafkaEvent<?>> kafkaTemplate;
 
+    @Value("${app.kafka.topics.daily-report}")
     private String dailyReportTopic;
+
+    @Value("${app.kafka.topics.user-registered}")
     private String userRegisteredTopic;
 
     public void publishDailyAnalyticsEvent(DailyReportRow event) {
-        kafkaTemplate.send(dailyReportTopic, event.getUserId().toString(), new KafkaEvent<>(event));
+        String key = event.getUserId().toString();
+
+        kafkaTemplate.send(
+                dailyReportTopic,
+                key,
+                new KafkaEvent<>(event)
+        ).whenComplete((result, ex) -> {
+            if (ex != null) {
+                log.error(
+                        "Failed to publish daily-analytics event, key={}, userId={}",
+                        key,
+                        event.getUserId(),
+                        ex
+                );
+            }
+        });
     }
 
     public void publishUserRegistrationEvent(UserRegisteredReport event) {
