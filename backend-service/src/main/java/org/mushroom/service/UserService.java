@@ -7,6 +7,7 @@ import org.mushroom.entity.User;
 import org.mushroom.exception.ConflictException;
 import org.mushroom.exception.ForbiddenActionException;
 import org.mushroom.exception.NotFoundException;
+import org.mushroom.kafka.publisher.EventPublisher;
 import org.mushroom.mapper.UserMapper;
 import org.mushroom.model.*;
 import org.mushroom.reports.UserRegisteredReport;
@@ -29,7 +30,7 @@ public class UserService {
     private final UserMapper userMapper;
     private final Clock clock;
     private final PasswordEncoder passwordEncoder;
-    private final RegistrationAnalyticsService registrationAnalyticsService;
+    private final EventPublisher eventPublisher;
 
     public UserRegistrationResponse registerUser(UserRegistrationRequest request) {
         try {
@@ -49,14 +50,10 @@ public class UserService {
 
             User savedUser = userRepository.save(user);
 
-            registrationAnalyticsService.publishRegistrationEvent(new UserRegisteredReport(
-                    savedUser.getId(),
-                    savedUser.getEmail(),
-                    savedUser.getFirstname(),
-                    savedUser.getLastname(),
-                    savedUser.getCreatedAt()
-            ));
+            UserRegisteredReport report = new UserRegisteredReport(
+                    savedUser.getEmail());
 
+            eventPublisher.publishUserRegistrationEvent(report);
             return userMapper.toRegistrationResponse(savedUser);
 
         } catch (DataIntegrityViolationException e) {
