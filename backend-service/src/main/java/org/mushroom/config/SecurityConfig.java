@@ -42,8 +42,11 @@ public class SecurityConfig {
                             response.getWriter().write("{\"message\":\"Authentication required\",\"path\":\"" + request.getRequestURI() + "\"}");
                         })
                 )
-
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(mvc.pattern("/v3/api-docs/**")).permitAll()
+                        .requestMatchers(mvc.pattern("/swagger-ui/**")).permitAll()
+                        .requestMatchers(mvc.pattern("/swagger-ui.html")).permitAll()
+
                         .requestMatchers(mvc.pattern("/api/v1/users/register")).permitAll()
                         .requestMatchers(mvc.pattern("/api/v1/auth/login")).permitAll()
                         .requestMatchers(mvc.pattern("/api/v1/auth/logout")).authenticated()

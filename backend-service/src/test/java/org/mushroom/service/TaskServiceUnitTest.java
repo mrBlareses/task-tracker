@@ -1,17 +1,15 @@
-package service;
+package org.mushroom.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mushroom.entity.Task;
-import org.mushroom.entity.User;
 import org.mushroom.exception.NotFoundException;
 import org.mushroom.mapper.TaskMapper;
 import org.mushroom.model.task.TaskResponse;
 import org.mushroom.model.task.TaskUpdateRequest;
 import org.mushroom.repository.TaskRepository;
-import org.mushroom.service.TaskService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -40,8 +38,6 @@ class TaskServiceUnitTest {
     @Mock
     private Clock clock;
     private UUID taskId;
-    private UUID userId;
-    private User currentUser;
     private Instant fixedInstant;
     private ZoneId fixedZone;
     private OffsetDateTime fixedNow;
@@ -49,12 +45,6 @@ class TaskServiceUnitTest {
     @BeforeEach
     void setUp() {
         taskId = UUID.randomUUID();
-        userId = UUID.randomUUID();
-
-        currentUser = User.builder()
-                .id(userId)
-                .email("user@test.com")
-                .build();
 
         fixedInstant = Instant.parse("2026-01-23T10:15:30Z");
         fixedZone = ZoneOffset.ofHours(3);

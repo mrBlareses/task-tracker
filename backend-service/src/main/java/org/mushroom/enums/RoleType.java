@@ -1,5 +1,4 @@
-package org.mushroom.authority;
-
+package org.mushroom.enums;
 
 public enum RoleType {
     USER,

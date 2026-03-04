@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_DB: ${POSTGRES_DATABASE}
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
@@ -51,11 +51,37 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD", "kafka-topics.sh", "--list", "--bootstrap-server", "localhost:9092"]
+      test: [ "CMD-SHELL", "bash -c '>/dev/tcp/localhost/9092'" ]
       interval: 10s
-      timeout: 10s
-      retries: 10
+      timeout: 5s
+      retries: 20
       start_period: 30s
+    restart: unless-stopped
+    networks:
+      - task-tracker-net
+
+  backend:
+    build:
+      context: ./backend-service
+      dockerfile: Dockerfile
+    depends_on:
+        postgres:
+          condition: service_healthy
+        kafka:
+          condition: service_healthy
+    ports:
+      - "8081:8081"
+    env_file:
+    - ./.env
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+      SERVER_PORT: ${SERVER_PORT}
     restart: unless-stopped
     networks:
       - task-tracker-net

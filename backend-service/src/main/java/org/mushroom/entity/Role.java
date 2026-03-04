@@ -1,7 +1,7 @@
 package org.mushroom.entity;
 
 import lombok.*;
-import org.mushroom.authority.RoleType;
+import org.mushroom.enums.RoleType;
 import jakarta.persistence.*;
 
 import java.util.UUID;

@@ -2,7 +2,7 @@ package org.mushroom.reports;
 
 import java.util.UUID;
 
-public interface DailyReportRow {
+public interface UserDailyReportProjection {
     UUID getUserId();
     String getEmail();
     int getPendingCount();

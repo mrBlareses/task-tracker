@@ -1,10 +1,9 @@
 package org.mushroom.service;
 
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.mushroom.kafka.publisher.EventPublisher;
-import org.mushroom.reports.DailyReportRow;
+import org.mushroom.kafka.EventPublisher;
+import org.mushroom.reports.UserDailyReportProjection;
 import org.mushroom.repository.TaskRepository;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -18,7 +17,7 @@ public class DailyAnalyticsService {
 
     @Async("analyticsExecutor")
     public void collectAndSendDailyAnalytics() {
-        for (DailyReportRow report : taskRepository.getDailyReports()) {
+        for (UserDailyReportProjection report : taskRepository.getDailyReports()) {
             eventPublisher.publishDailyAnalyticsEvent(report);
         }
     }

@@ -1,4 +1,4 @@
-package service;
+package org.mushroom.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -6,18 +6,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mushroom.authority.RoleType;
+import org.mushroom.enums.RoleType;
 import org.mushroom.entity.Role;
 import org.mushroom.entity.User;
 import org.mushroom.exception.ConflictException;
 import org.mushroom.exception.ForbiddenActionException;
 import org.mushroom.exception.NotFoundException;
+import org.mushroom.kafka.EventPublisher;
 import org.mushroom.mapper.UserMapper;
 import org.mushroom.model.UserRegistrationRequest;
 import org.mushroom.model.UserRegistrationResponse;
 import org.mushroom.model.UserUpdateRequest;
 import org.mushroom.repository.UserRepository;
-import org.mushroom.service.UserService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -51,6 +51,9 @@ class UserServiceUnitTest {
 
     @InjectMocks
     private UserService userService;
+
+    @Mock
+    private EventPublisher eventPublisher;
 
     private final UUID userId = UUID.randomUUID();
     private final String email = "test@example.com";

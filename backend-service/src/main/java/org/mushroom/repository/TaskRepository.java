@@ -1,8 +1,9 @@
 package org.mushroom.repository;
 
 import org.mushroom.entity.Task;
-import org.mushroom.reports.DailyReportRow;
+import org.mushroom.reports.UserDailyReportProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -12,6 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface TaskRepository extends JpaRepository<Task, UUID> {
+    @Modifying
     @Query(value = """
             UPDATE tasks
             SET
@@ -43,5 +45,5 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
             LEFT JOIN tasks t ON t.user_id = u.id
             GROUP BY u.id, u.email
             """, nativeQuery = true)
-    List<DailyReportRow> getDailyReports();
+    List<UserDailyReportProjection> getDailyReports();
 }

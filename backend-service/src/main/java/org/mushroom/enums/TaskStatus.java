@@ -1,4 +1,4 @@
-package org.mushroom.entity;
+package org.mushroom.enums;
 
 public enum TaskStatus {
     TODO,

@@ -36,7 +36,6 @@ public interface UserMapper {
     @Mapping(target = "lastName", source = "lastname")
     UserRegistrationResponse toRegistrationResponse(User user);
 
-
     @Named("rolesToAuthorityStrings")
     default List<String> rolesToAuthorityStrings(Set<Role> roles) {
         if (roles == null || roles.isEmpty()) {

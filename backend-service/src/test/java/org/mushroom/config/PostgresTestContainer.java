@@ -1,4 +1,4 @@
-package config;
+package org.mushroom.config;
 
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;

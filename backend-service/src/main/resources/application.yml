@@ -1,36 +1,39 @@
 server:
-  port: 8081
+  port: ${SERVER_PORT:8081}
 
 spring:
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
-    hibernate:
-      ddl-auto: validate
     show-sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
 
   liquibase:
     change-log: classpath:db.changelog/changelog-master.xml
     enabled: true
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+
     producer:
-      acks: all
-      retries: 5
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: ${SPRING_KAFKA_PRODUCER_ACKS}
+      retries: ${SPRING_KAFKA_PRODUCER_RETRIES}
+      key-serializer: ${SPRING_KAFKA_PRODUCER_KEY_SERIALIZER}
+      value-serializer: ${SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER}
+
       properties:
-        enable.idempotence: true
-        max.in.flight.requests.per.connection: 5
+        enable.idempotence: ${SPRING_KAFKA_PRODUCER_ENABLE_IDEMPOTENCE}
+        max.in.flight.requests.per.connection: ${SPRING_KAFKA_PRODUCER_MAX_IN_FLIGHT}
+
 jwt:
   secret: ${JWT_SECRET}
-  expiration: ${JWT_EXPIRATION}
 
 app:
   kafka:

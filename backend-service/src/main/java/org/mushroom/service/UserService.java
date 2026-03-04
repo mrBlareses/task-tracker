@@ -1,16 +1,15 @@
 package org.mushroom.service;
 
-import org.mushroom.authority.RoleType;
+import org.mushroom.enums.RoleType;
 import lombok.RequiredArgsConstructor;
 import org.mushroom.entity.Role;
 import org.mushroom.entity.User;
 import org.mushroom.exception.ConflictException;
 import org.mushroom.exception.ForbiddenActionException;
 import org.mushroom.exception.NotFoundException;
-import org.mushroom.kafka.publisher.EventPublisher;
+import org.mushroom.kafka.EventPublisher;
 import org.mushroom.mapper.UserMapper;
 import org.mushroom.model.*;
-import org.mushroom.reports.UserRegisteredReport;
 import org.mushroom.repository.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.Authentication;
@@ -50,10 +49,7 @@ public class UserService {
 
             User savedUser = userRepository.save(user);
 
-            UserRegisteredReport report = new UserRegisteredReport(
-                    savedUser.getEmail());
-
-            eventPublisher.publishUserRegistrationEvent(report);
+            eventPublisher.publishUserRegistrationEvent(savedUser.getEmail());
             return userMapper.toRegistrationResponse(savedUser);
 
         } catch (DataIntegrityViolationException e) {

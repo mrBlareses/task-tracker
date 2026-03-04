@@ -1,10 +1,8 @@
-package org.mushroom.kafka.publisher;
+package org.mushroom.kafka;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.mushroom.kafka.KafkaEvent;
-import org.mushroom.reports.DailyReportRow;
-import org.mushroom.reports.UserRegisteredReport;
+import org.mushroom.reports.UserDailyReportProjection;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,7 +20,7 @@ public class EventPublisher {
     @Value("${app.kafka.topics.user-registered}")
     private String userRegisteredTopic;
 
-    public void publishDailyAnalyticsEvent(DailyReportRow event) {
+    public void publishDailyAnalyticsEvent(UserDailyReportProjection event) {
         String key = event.getUserId().toString();
 
         kafkaTemplate.send(
@@ -41,19 +39,18 @@ public class EventPublisher {
         });
     }
 
-    public void publishUserRegistrationEvent(UserRegisteredReport event) {
-        String key = event.email();
+    public void publishUserRegistrationEvent(String email) {
 
         kafkaTemplate.send(
                 userRegisteredTopic,
-                key,
-                new KafkaEvent<>(event)
+                email,
+                new KafkaEvent<>(email)
         ).whenComplete((result, ex) -> {
             if (ex != null) {
                 log.error(
                         "Failed to publish user-registered event, key={}, email={}",
-                        key,
-                        event.email(),
+                        email,
+                        email,
                         ex
                 );
             }

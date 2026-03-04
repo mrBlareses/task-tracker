@@ -1,13 +1,29 @@
 # TASK TRACKER Microservice Platform
 
+![Java](https://img.shields.io/badge/Java-24-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-green)
+![Kafka](https://img.shields.io/badge/Kafka-Apache-black)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)
+![Docker](https://img.shields.io/badge/Docker-Compose-blue)
+![Build](https://img.shields.io/badge/build-gradle-success)
+
 ## Содержание
+
 - [Архитектура](#архитектура)
 - [Диаграммы C4](#диаграммы-c4)
 - [Состав репозитория](#состав-репозитория)
+- [Стек технологий](#стек-технологий)
+- [Предварительные требования](#предварительные-требования)
 - [Быстрый старт](#быстрый-старт)
-- [Ручной запуск (без Makefile)](#ручной-запуск-без-makefile)
+- [Ручной запуск](#ручной-запуск-без-makefile)
+- [Docker команды](#docker-команды)
+- [Gradle команды](#gradle-команды)
 - [Порты и сервисы](#порты-и-сервисы)
-- [Типовые ошибки и устранение](#типовые-ошибки-и-устранение)
+- [Debugging / Диагностика](#debugging--диагностика)
+- [Типовые ошибки](#типовые-ошибки)
+- [Конфигурация](#конфигурация)
+- [API документация](#api-документация)
+- [Postman коллекция](#postman-коллекция)
 - [Структура каталогов](#структура-каталогов)
 
 ---
@@ -39,32 +55,57 @@
 
 ## Состав репозитория
 
-- `diagrams/` — C4-диаграммы архитектуры (PlantUML файлы).
-- `docker-compose.yml` — Docker Compose для инфраструктуры и сервисов (MySQL, Kafka, Zookeeper).
-- `.env` — Локальные переменные (в .gitignore).
-- `Makefile` — удобные команды для запуска и обслуживания окружения.
-- `README.md` — документация.
+- `backend-service/` — основной backend сервис (Spring Boot REST API).
+- `diagrams/` — C4-диаграммы архитектуры (PlantUML).
+- `docker-compose.yml` — инфраструктура проекта (PostgreSQL, Kafka, Zookeeper, backend-service).
+- `.env.example` — пример переменных окружения.
+- `.env` — локальные переменные окружения (в `.gitignore`).
+- `Taskfile.yml` — команды для управления окружением и сборкой проекта.
+- `README.md` — документация проекта.
 
+# Стек технологий
+
+- **Java:** 24
+- **Framework:** Spring Boot
+- **Database:** PostgreSQL
+- **Messaging:** Apache Kafka + Zookeeper
+- **Containerization:** Docker, Docker Compose
+- **Build:** Gradle
+- **Migrations:** Liquibase
+- **Mapping:** MapStruct
+- **API documentation:** OpenAPI (SpringDoc + Swagger UI)
+- **Testing:** JUnit
+
+---
+
+# Предварительные требования
+
+Перед запуском проекта убедитесь, что установлены:
+
+- Docker
+- Docker Compose
+- JDK 24
+- Git
 ---
 
 ## Быстрый старт
 
 ```bash
-# Запуск всех контейнеров
-make up
+# Быстрый запуск полного окружения разработки (Postgres, Kafka, приложение)
+task up
 
-# Остановка и удаление всех контейнеров
-make down
+# Полный сброс окружения — удаление volumes, пересборка образа и запуск
+task reset
 
-# Просмотр логов контейнеров (с флагом -f для слежения)
-make logs
+# Просмотр логов всех контейнеров Docker Compose в реальном времени
+task docker-compose-logs
 
-# Очистка Kafka (удаление контейнеров и volumes)
-make clean-kafka
+# Показать список запущенных Docker контейнеров
+task status
 
 ```
 
-Требуется: Docker (compose), JDK 24, make.
+Требуется: Docker, Docker Compose, JDK 24, Task (go-task).
 
 ---
 
@@ -78,7 +119,39 @@ docker compose -f docker-compose.yml --env-file .env up -d
 docker compose -f docker-compose.yml --env-file .env down
 ```
 
----
+## Docker команды
+
+```bash
+# Сборка Docker образа backend-service
+task backend-service-build
+
+# Запуск контейнера backend-service
+task backend-service-run
+
+# Остановка контейнера backend-service
+task backend-service-stop
+
+# Удаление контейнера backend-service
+task backend-service-remove
+
+# Полное удаление контейнера и образа backend-service
+task backend-service-clean
+```
+
+## Gradle команды
+```bash
+# Запуск Spring Boot приложения локально
+task run
+
+# Сборка проекта и создание jar файла
+task build
+
+# Запуск всех тестов
+task test
+
+# Очистка папки build
+task clean
+```
 
 ## Порты и сервисы
 
@@ -86,29 +159,156 @@ docker compose -f docker-compose.yml --env-file .env down
 |-------------------|-------------|----------------------------------------------|
 | Postgres          | 5432        | База данных для пользователей и задач        |
 | Zookeeper         | 2181        | Координация для Kafka                        |   
-| Kafka             | 9092        | Брокер Kafka                                 |   
+| Kafka             | 9092        | Брокер Kafka                                 | 
+| backend-service   | 8081        | REST API Spring Boot приложения              |
 
 
 ---
+# Debugging / Диагностика
+Проверить контейнеры:
+```bash
+docker compose ps
+```
+Просмотреть логи:
+```bash
+task docker-compose-logs
+```
+Список контейнеров:
+```bash
+docker ps
+```
+Проверить занятые порты (Windows):
+```bash
+netstat -ano | findstr :8081
+netstat -ano | findstr :5432
+netstat -ano | findstr :9092
+```
+---
+# Типовые ошибки
+**Порты заняты**
+Убедитесь что `8081`, `5432`, `2181`, `9092` не используются.
+---
+**Backend-service не стартует**
+Проверьте логи:
+```bash
+task docker-compose-logs
+```
+---
 
-## Типовые ошибки и устранение
+**Нет подключения к Postgres**
+Проверьте `.env` и состояние контейнера postgres.
+---
+**Kafka не запускается**
+Очистите volumes:
+```bash
+task docker-compose-clean
+```
+---
 
-- **Проблема с портами** — убедитесь, что порты не заняты локальными сервисами.  
-- **Keycloak не стартует** — проверьте, что Postgres поднят и доступен.  
-- **MySQL не healthy** — Ждите healthcheck (mysqladmin ping). Если timeout, увеличьте retries в compose.
-- **No connection to DB/Kafka** - Ждите healthcheck (mysqladmin ping). Если timeout, увеличьте retries в compose.  
-- **Не стартует Kafka кластер** - очистите Kafka кластер.  
+# Конфигурация
+Все настройки выполняются через переменные окружения.
+Скопируйте файл:
+```bash
+cp .env.example .env
+```
+### Основные переменные
+**Server**
+```
+SERVER_PORT
+```
+**PostgreSQL**
+```
+POSTGRES_DB
+POSTGRES_USER
+POSTGRES_PASSWORD
+```
+**Spring Datasource**
+```
+SPRING_DATASOURCE_URL
+SPRING_DATASOURCE_USERNAME
+SPRING_DATASOURCE_PASSWORD
+```
+**Kafka**
+```
+SPRING_KAFKA_BOOTSTRAP_SERVERS
+```
+**JWT**
+```
+JWT_SECRET
+```
+---
 
+# API документация
+Swagger UI доступен по адресу:
+```
+http://localhost:8081/swagger-ui.html
+```
+OpenAPI спецификация:
+```
+http://localhost:8081/v3/api-docs
+```
+---
+
+# Postman коллекция
+
+Для удобного тестирования API доступна Postman коллекция.
+
+<a href="https://mash77-4007.postman.co/workspace/task-tracker~a5009b8f-ef6f-4bee-9a64-ee045b45e135/collection/41844941-05476f88-28e2-4c97-8619-acaeee2ea940?action=share&source=copy-link&creator=41844941">
+  <img src="./button.svg" alt="Run in Postman" width="150"/>
+</a>
+
+После запуска проекта:
+```bash
+task docker-compose-up
+```
+
+API будет доступен:
+```
+http://localhost:8081
+```
+
+## Импорт API в Postman через OpenAPI
+1. Запустите проект
+```bash
+task docker-compose-up
+```
+2. Откройте Postman
+3. Нажмите **Import → Link**
+4. Вставьте:
+```
+http://localhost:8081/v3/api-docs
+```
+Postman автоматически создаст коллекцию со всеми endpoints.
 ---
 
 ## Структура каталогов
-
 ```
-task-tracker/
-├── .env                          # Локальные переменные (в .gitignore)
-├── docker-compose.yml            # Docker Compose для сервисов
-├── Makefile                      # Утилитарные команды
-├── README.md                     # Документация проекта
-└── diagrams/                     # C4-диаграммы архитектуры
-    └── context.puml
+backend-service/
+├── openapi/                      # OpenAPI спецификации
+├── src/
+│   ├── main/
+│   │   ├── java/org/mushroom/
+│   │   │   ├── config/           # Конфигурации Spring
+│   │   │   ├── controller/       # REST контроллеры
+│   │   │   ├── entity/           # JPA сущности
+│   │   │   ├── enums/            # enums
+│   │   │   ├── exception/        # Кастомные исключения
+│   │   │   ├── kafka/            # Kafka продюсеры/консьюмеры
+│   │   │   ├── mapper/           # MapStruct мапперы
+│   │   │   ├── reports/          # Отчёты / аналитика
+│   │   │   ├── repository/       # Spring Data репозитории
+│   │   │   ├── service/          # Бизнес-логика
+│   │   │   └── util/             # Утилиты
+│   │   └── resources/
+│   │       └── db.changelog/     # Liquibase миграции
+│   │           └── scripts/
+│   └── test/
+│       ├── java/org/mushroom/
+│       │   ├── config/
+│       │   ├── controller/
+│       │   ├── repository/
+│       │   └── service/
+│       └── resources/
+├── build.gradle
+└── settings.gradle
 ```
