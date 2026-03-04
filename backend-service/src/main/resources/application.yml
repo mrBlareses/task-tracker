@@ -1,23 +1,42 @@
 server:
-  port: 8081
+  port: ${SERVER_PORT:8081}
 
 spring:
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: ${POSTGRES_USER:postgres}
-    password: ${POSTGRES_PASSWORD:password}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
-    hibernate:
-      ddl-auto: validate
     show-sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
 
   liquibase:
     change-log: classpath:db.changelog/changelog-master.xml
     enabled: true
 
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+
+    producer:
+      acks: ${SPRING_KAFKA_PRODUCER_ACKS}
+      retries: ${SPRING_KAFKA_PRODUCER_RETRIES}
+      key-serializer: ${SPRING_KAFKA_PRODUCER_KEY_SERIALIZER}
+      value-serializer: ${SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER}
+
+      properties:
+        enable.idempotence: ${SPRING_KAFKA_PRODUCER_ENABLE_IDEMPOTENCE}
+        max.in.flight.requests.per.connection: ${SPRING_KAFKA_PRODUCER_MAX_IN_FLIGHT}
+
 jwt:
-  secret: ${JWT_SECRET:secret}
-  expiration: ${JWT_EXPIRATION:86400000}
+  secret: ${JWT_SECRET}
+
+app:
+  kafka:
+    topics:
+      daily-report: daily-report
+      user-registered: user-registered

@@ -1,0 +1,81 @@
+openapi: 3.0.0
+info:
+  title: Task Tracker Service API
+  description: API for scheduler/cron services
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8081
+
+paths:
+  /api/v1/service/daily-analytics:
+    get:
+      summary: Build daily task analytics for all users (service-only)
+      operationId: collectDailyAnalytics
+      tags:
+        - ServiceAnalytics
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '202':
+          description: Daily analytics accepted for processing
+        '401':
+          description: Unauthorized (missing/invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden (requires SERVICE role)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    DailyReport:
+      type: object
+      required:
+        - userId
+        - email
+        - pendingCount
+        - completedCount
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: User identifier.
+        email:
+          type: string
+          format: email
+          description: User email.
+        pendingCount:
+          type: integer
+          format: int32
+          description: Count of tasks with status TODO or IN_PROGRESS.
+        completedCount:
+          type: integer
+          format: int32
+          description: Count of tasks marked DONE during [from, to).
+
+    ErrorResponse:
+      type: object
+      required:
+        - message
+        - timestamp
+        - path
+      properties:
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        path:
+          type: string
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

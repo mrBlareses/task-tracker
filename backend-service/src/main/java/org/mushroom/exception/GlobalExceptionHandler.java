@@ -93,7 +93,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAllExceptions(Exception ex,
-                                                       HttpServletRequest req) {
+                                                             HttpServletRequest req) {
 
         String message = "Internal server error: " + ex.getMessage();
         return build(message, req, HttpStatus.INTERNAL_SERVER_ERROR);

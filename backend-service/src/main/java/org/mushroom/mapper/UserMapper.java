@@ -8,6 +8,7 @@ import org.mushroom.model.UserResponse;
 import org.mushroom.model.UserUpdateRequest;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Mapper(
@@ -35,9 +36,8 @@ public interface UserMapper {
     @Mapping(target = "lastName", source = "lastname")
     UserRegistrationResponse toRegistrationResponse(User user);
 
-
     @Named("rolesToAuthorityStrings")
-    default List<String> rolesToAuthorityStrings(List<Role> roles) {
+    default List<String> rolesToAuthorityStrings(Set<Role> roles) {
         if (roles == null || roles.isEmpty()) {
             return List.of();
         }

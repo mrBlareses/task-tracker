@@ -2,6 +2,7 @@ package org.mushroom.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.mushroom.enums.TaskStatus;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -13,6 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Task {
 
     @Id

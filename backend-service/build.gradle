@@ -51,6 +51,8 @@ dependencies {
     implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
     implementation 'io.swagger.core.v3:swagger-annotations:2.2.20'
 
+    //KAFKA
+    implementation 'org.springframework.kafka:spring-kafka'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -150,6 +152,32 @@ tasks.register('generateTaskApi', org.openapitools.generator.gradle.plugin.tasks
     }
 }
 
+tasks.register('generateServiceApi', org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    group = 'OpenAPI'
+    description = 'Generate Service API from OpenAPI spec'
+
+    dependsOn createOpenApiDir
+
+    generatorName = 'spring'
+    inputSpec = "${projectDir}/openapi/service-api.yml"
+    outputDir = "${buildDir}/generated/service-api"
+
+    apiPackage = "org.mushroom.service.api"
+    modelPackage = "org.mushroom.service.model"
+
+    configOptions = [
+            useSpringBoot3    : "true",
+            useTags           : "true",
+            useBeanValidation : "true",
+            openApiNullable   : "false",
+            interfaceOnly     : "true",
+            useLombok         : "true",
+            lombokBuilder     : "true",
+            modelLombok       : "true",
+            modelLombokBuilder: "true"
+    ]
+}
+
 // ============ MAPSTRUCT CONFIGURATION ============
 tasks.withType(JavaCompile).configureEach {
     options.annotationProcessorPath = configurations.annotationProcessor
@@ -158,6 +186,7 @@ tasks.withType(JavaCompile).configureEach {
 tasks.named('compileJava') {
     dependsOn tasks.named('generateUserApi')
     dependsOn tasks.named('generateTaskApi')
+    dependsOn tasks.named('generateServiceApi')
 
     options.annotationProcessorPath = configurations.annotationProcessor
 }
@@ -169,6 +198,7 @@ sourceSets {
                     'src/main/java',
                     "${buildDir}/generated/user-api/src/main/java",
                     "${buildDir}/generated/task-api/src/main/java",
+                    "${buildDir}/generated/service-api/src/main/java",
                     "${buildDir}/generated/sources/annotationProcessor/java/main"
             ]
         }

@@ -2,7 +2,7 @@ package org.mushroom.mapper;
 
 import org.mapstruct.*;
 import org.mushroom.entity.Task;
-import org.mushroom.entity.TaskStatus;
+import org.mushroom.enums.TaskStatus;
 import org.mushroom.model.task.TaskCreateRequest;
 import org.mushroom.model.task.TaskResponse;
 import org.mushroom.model.task.TaskUpdateRequest;

@@ -46,7 +46,7 @@ public class TaskService {
 
     public Task getTaskById(UUID id) {
         return taskRepository.findById(id)
-                .orElseThrow(() -> new IllegalStateException("Task was validated but not found"));
+                .orElseThrow(() -> new NotFoundException("Task not found: " + id));
     }
 
     public TaskResponse updateTask(UUID id, TaskUpdateRequest request) {
@@ -56,6 +56,7 @@ public class TaskService {
         String status = request.getStatus() != null ? request.getStatus().name() : null;
 
         Task updated = taskRepository.update(
+                id,
                 title,
                 description,
                 status,

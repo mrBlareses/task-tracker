@@ -1,12 +1,13 @@
 package org.mushroom.service;
 
-import org.mushroom.authority.RoleType;
+import org.mushroom.enums.RoleType;
 import lombok.RequiredArgsConstructor;
 import org.mushroom.entity.Role;
 import org.mushroom.entity.User;
 import org.mushroom.exception.ConflictException;
 import org.mushroom.exception.ForbiddenActionException;
 import org.mushroom.exception.NotFoundException;
+import org.mushroom.kafka.EventPublisher;
 import org.mushroom.mapper.UserMapper;
 import org.mushroom.model.*;
 import org.mushroom.repository.UserRepository;
@@ -23,13 +24,14 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UserService{
+public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final Clock clock;
     private final PasswordEncoder passwordEncoder;
+    private final EventPublisher eventPublisher;
 
-    public UserRegistrationResponse  registerUser(UserRegistrationRequest request) {
+    public UserRegistrationResponse registerUser(UserRegistrationRequest request) {
         try {
             User user = User.builder()
                     .email(request.getEmail())
@@ -47,6 +49,7 @@ public class UserService{
 
             User savedUser = userRepository.save(user);
 
+            eventPublisher.publishUserRegistrationEvent(savedUser.getEmail());
             return userMapper.toRegistrationResponse(savedUser);
 
         } catch (DataIntegrityViolationException e) {
