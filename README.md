@@ -15,12 +15,11 @@
 - [Стек технологий](#стек-технологий)
 - [Предварительные требования](#предварительные-требования)
 - [Быстрый старт](#быстрый-старт)
-- [Ручной запуск](#ручной-запуск-без-makefile)
+- [Ручной запуск](#ручной-запуск)
 - [Docker команды](#docker-команды)
 - [Gradle команды](#gradle-команды)
 - [Порты и сервисы](#порты-и-сервисы)
 - [Debugging / Диагностика](#debugging--диагностика)
-- [Типовые ошибки](#типовые-ошибки)
 - [Конфигурация](#конфигурация)
 - [API документация](#api-документация)
 - [Postman коллекция](#postman-коллекция)
@@ -37,14 +36,22 @@
 - Backend Service: REST API для регистрации, авторизации (JWT), работы с задачами (создание, редактирование, удаление, пометка как выполненной).
 - Scheduler Service: Генерация ежедневных отчетов по задачам (Spring Scheduler запускает задачи по cron в полночь).
 - Email Sender Service: Отправка email (приветственные письма при регистрации, ежедневные отчеты) через Mailjet с использованием Spring Mail.
-- Postgres: Хранение пользователей и задач (отношение один-ко-многим).
-- Kafka + Zookeeper: Брокер сообщений для асинхронной отправки задач на email.
-- Mailjet: Внешний SMTP-сервис для реальной отправки писем.
+- Postgres: хранение пользователей и задач.
+- Kafka + Zookeeper: брокер сообщений для асинхронной коммуникации между сервисами (публикация/обработка событий и команд).
+- MailHog (dev): локальный SMTP сервер + web UI для просмотра писем во время разработки.
 ---
 
 ## Диаграммы C4
-Описание контейнеров (сервисов) и их взаимодействия.
-Технологический стек каждого компонента.
+
+> Исходники диаграмм — в `diagrams/*.puml`. Для удобства в README используются рендеры в PNG.
+
+### Контекстная диаграмма
+
+![C4 Context](diagrams/BackendServiceComponentDiagramWithOpenAPI.png)
+
+### Компонентная диаграмма Backend Service
+
+![Backend Service Component](diagrams/TaskTrackerArchitecture.png)
 
 ### [Контекстная диаграмма](diagrams/context.puml) 
 - Описание взаимодействия системы с внешними пользователями и системами
@@ -59,7 +66,6 @@
 - `diagrams/` — C4-диаграммы архитектуры (PlantUML).
 - `docker-compose.yml` — инфраструктура проекта (PostgreSQL, Kafka, Zookeeper, backend-service).
 - `.env.example` — пример переменных окружения.
-- `.env` — локальные переменные окружения (в `.gitignore`).
 - `Taskfile.yml` — команды для управления окружением и сборкой проекта.
 - `README.md` — документация проекта.
 
@@ -109,7 +115,7 @@ task status
 
 ---
 
-## Ручной запуск (без Makefile)
+## Ручной запуск
 
 ```bash
 # Запуск всех сервисов напрямую
@@ -182,26 +188,6 @@ docker ps
 netstat -ano | findstr :8081
 netstat -ano | findstr :5432
 netstat -ano | findstr :9092
-```
----
-# Типовые ошибки
-**Порты заняты**
-Убедитесь что `8081`, `5432`, `2181`, `9092` не используются.
----
-**Backend-service не стартует**
-Проверьте логи:
-```bash
-task docker-compose-logs
-```
----
-
-**Нет подключения к Postgres**
-Проверьте `.env` и состояние контейнера postgres.
----
-**Kafka не запускается**
-Очистите volumes:
-```bash
-task docker-compose-clean
 ```
 ---
 
@@ -283,32 +269,46 @@ Postman автоматически создаст коллекцию со все
 
 ## Структура каталогов
 ```
-backend-service/
-├── openapi/                      # OpenAPI спецификации
-├── src/
-│   ├── main/
-│   │   ├── java/org/mushroom/
-│   │   │   ├── config/           # Конфигурации Spring
-│   │   │   ├── controller/       # REST контроллеры
-│   │   │   ├── entity/           # JPA сущности
-│   │   │   ├── enums/            # enums
-│   │   │   ├── exception/        # Кастомные исключения
-│   │   │   ├── kafka/            # Kafka продюсеры/консьюмеры
-│   │   │   ├── mapper/           # MapStruct мапперы
-│   │   │   ├── reports/          # Отчёты / аналитика
-│   │   │   ├── repository/       # Spring Data репозитории
-│   │   │   ├── service/          # Бизнес-логика
-│   │   │   └── util/             # Утилиты
-│   │   └── resources/
-│   │       └── db.changelog/     # Liquibase миграции
-│   │           └── scripts/
-│   └── test/
-│       ├── java/org/mushroom/
-│       │   ├── config/
-│       │   ├── controller/
-│       │   ├── repository/
-│       │   └── service/
-│       └── resources/
-├── build.gradle
-└── settings.gradle
+.
+├── backend-service/
+│   ├── build.gradle
+│   ├── gradle.properties
+│   ├── settings.gradle
+│   ├── openapi/
+│   │   ├── service-api.yml
+│   │   ├── task-api.yml
+│   │   └── user-api.yml
+│   ├── gradle/
+│   │   └── wrapper/
+│   │       ├── gradle-wrapper.jar
+│   │       └── gradle-wrapper.properties
+│   ├── gradlew
+│   ├── gradlew.bat
+│   └── src/
+│       ├── main/
+│       │   ├── java/
+│       │   └── resources/
+│       └── test/
+│           ├── java/
+│           └── resources/
+├── diagrams/
+│   ├── component.png
+│   ├── component.puml
+│   ├── context.png
+│   └── context.puml
+├── gradle/
+│   └── wrapper/
+│       ├── gradle-wrapper.jar
+│       └── gradle-wrapper.properties
+├── .dockerignore
+├── .env.example
+├── .gitignore
+├── button.svg
+├── docker-compose.yml
+├── Dockerfile
+├── gradlew
+├── gradlew.bat
+├── settings.gradle
+├── Taskfile.yml
+└── README.md
 ```

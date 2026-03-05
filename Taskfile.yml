@@ -1,0 +1,147 @@
+version: "3"
+
+dir: "{{.ROOT_DIR}}"
+
+vars:
+  GRADLE_CMD: '{{if eq OS "windows"}}cmd /c gradlew.bat{{else}}./gradlew{{end}}'
+  BACKEND: ":backend-service"
+
+tasks:
+  # ==========================
+  # ROOT GRADLE
+  # ==========================
+
+  run:
+    desc: (root) Запуск Spring Boot приложения локально через Gradle
+    cmds:
+      - '{{.GRADLE_CMD}} bootRun'
+
+  build:
+    desc: (root) Сборка приложения и создание jar файла
+    cmds:
+      - '{{.GRADLE_CMD}} clean bootJar'
+
+  test:
+    desc: (root) Запуск всех тестов проекта
+    cmds:
+      - '{{.GRADLE_CMD}} test'
+
+  clean:
+    desc: (root) Очистка папки build и временных файлов сборки
+    cmds:
+      - '{{.GRADLE_CMD}} clean'
+
+  # ==========================
+  # BACKEND SERVICE
+  # ==========================
+
+  backend-gradle-run:
+    desc: Запуск backend-service локально через Gradle
+    cmds:
+      - '{{.GRADLE_CMD}} {{.BACKEND}}:bootRun'
+
+  backend-gradle-test:
+    desc: Запуск тестов backend-service
+    cmds:
+      - '{{.GRADLE_CMD}} {{.BACKEND}}:test'
+
+  backend-gradle-build:
+    desc: Сборка backend-service jar
+    cmds:
+      - '{{.GRADLE_CMD}} {{.BACKEND}}:clean {{.BACKEND}}:bootJar'
+
+  backend-gradle-clean:
+    desc: Очистка backend-service
+    cmds:
+      - '{{.GRADLE_CMD}} {{.BACKEND}}:clean'
+
+  # ==========================
+  # BACKEND SERVICE
+  # ==========================
+
+  backend-service-build:
+    desc: Сборка Docker образа backend-service
+    cmds:
+      - docker build -t backend-service .
+
+  backend-service-run:
+    desc: Запуск контейнера backend-service с переменными из файла .env
+    cmds:
+      - docker rm -f backend-service || true
+      - docker run --name backend-service --env-file .env -p 8081:8081 backend-service
+
+  backend-service-stop:
+    desc: Остановка запущенного контейнера backend-service
+    cmds:
+      - docker stop backend-service || true
+
+  backend-service-remove:
+    desc: Удаление контейнера backend-service если он существует
+    cmds:
+      - docker rm -f backend-service || true
+
+  backend-service-clean:
+    desc: Полное удаление контейнера и Docker образа backend-service
+    cmds:
+      - docker rm -f backend-service || true
+      - docker rmi backend-service || true
+
+  # ==========================
+  # DOCKER COMPOSE
+  # ==========================
+
+  docker-compose-up:
+    desc: Запуск всего окружения (backend, Postgres, Kafka) через Docker Compose
+    cmds:
+      - docker compose up --build
+
+  docker-compose-down:
+    desc: Остановка и удаление контейнеров Docker Compose
+    cmds:
+      - docker compose down
+
+  docker-compose-clean:
+    desc: Полная очистка Docker Compose включая volumes базы данных
+    cmds:
+      - docker compose down -v
+
+  docker-compose-logs:
+    desc: Просмотр логов всех контейнеров Docker Compose в реальном времени
+    cmds:
+      - docker compose logs -f
+
+  # ==========================
+  # DEV SHORTCUTS
+  # ==========================
+
+  up:
+    desc: Быстрый запуск полного окружения разработки через Docker Compose
+    cmds:
+      - task docker-compose-up
+
+  rebuild:
+    desc: Пересборка Docker образа backend (без запуска)
+    cmds:
+      - docker compose build --no-cache backend
+
+  reset:
+    desc: Полный сброс окружения — удаление volumes, пересборка образа и запуск
+    cmds:
+      - task docker-compose-clean
+      - task rebuild
+      - task docker-compose-up
+
+  down:
+    desc: Быстрая остановка окружения разработки
+    cmds:
+      - docker compose down
+
+  stop-all:
+    desc: Полностью остановить все контейнеры проекта
+    cmds:
+      - docker compose down
+      - docker rm -f backend-service || true
+  status:
+    desc: Показать список запущенных Docker контейнеров
+    cmds:
+      - docker ps

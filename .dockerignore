@@ -5,7 +5,7 @@
 .vscode
 
 # Gradle caches & build outputs (не копируем!)
-.gradle
+backend-service/.gradle
 build
 
 # OS

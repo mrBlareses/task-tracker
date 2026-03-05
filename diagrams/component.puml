@@ -37,7 +37,7 @@ RECTANGLE "Backend Service System" as System {
   COMPONENT "UserService\n(Spring Service)" as UserService #lightyellow
   COMPONENT "TaskService\n(Spring Service)" as TaskService #lightyellow
   COMPONENT "AuthService\n(Spring Service)" as AuthService #lightyellow
-  COMPONENT "KafkaProducerService\n(Spring Service)" as KafkaProducerService #lightyellow
+  COMPONENT "EventPublisher\n(Spring Service)" as KafkaProducerService #lightyellow
 
   ' Репозитории и Security
   COMPONENT "UserRepository\n(Spring Data JPA)" as UserRepository #orange

@@ -60,9 +60,9 @@ services:
     networks:
       - task-tracker-net
 
-  backend:
+  backend-service:
     build:
-      context: ./backend-service
+      context: .
       dockerfile: Dockerfile
     depends_on:
         postgres:

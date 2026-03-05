@@ -5,7 +5,7 @@
 Person(user, "Пользователь", "Создает и управляет задачами через веб-интерфейс или мобильное приложение")
 
 ' Внешние системы
-System_Ext(mailjet, "Mailjet", "Внешний email-сервис для отправки писем")
+System_Ext(mailhog, "Mailhog", "Внешний email-сервис для отправки писем")
 
 System_Boundary(System_TaskTracker, "Task Tracker Microservice Platform") {
 
@@ -13,11 +13,11 @@ System_Boundary(System_TaskTracker, "Task Tracker Microservice Platform") {
   Container(backend, "Backend Service", "Spring Boot, Spring Security, JWT", "REST API, аутентификация, бизнес-логика задач и пользователей")
 
   ' Сервисы фоновых процессов
-  Container(scheduler, "Scheduler Service", "Spring Boot, Spring Scheduler, Spring Kafka", "Генерация ежедневных отчетов по задачам")
+  Container(CronService, "CronService", "Spring Boot, Spring Scheduler, Spring Kafka", "Генерация ежедневных отчетов по задачам")
   Container(email_sender, "Email Sender Service", "Spring Boot, Spring Mail, Spring Kafka", "Отправка email через SMTP")
 
   ' Базы данных
-  ContainerDb(mysql, "MySQL Database", "MySQL 8.0", "Хранение пользователей, задач, системных данных")
+  ContainerDb(PostgreSQL, "PostgreSQL Database", "PostgreSQL 15", "Хранение пользователей, задач, системных данных")
 
   ' Брокер сообщений
   Container(kafka, "Kafka Message Broker", "Apache Kafka", "Асинхронная коммуникация между сервисами через топик EMAIL_SENDING_TASKS")
@@ -29,22 +29,22 @@ System_Boundary(System_TaskTracker, "Task Tracker Microservice Platform") {
 Rel(user, backend, "HTTP/REST API", "JWT аутентификация")
 
 ' Бэкенд работает с базой данных
-Rel(backend, mysql, "JPA/Hibernate", "CRUD операции пользователей и задач")
+Rel(backend, PostgreSQL, "JPA/Hibernate", "CRUD операции пользователей и задач")
 
 ' Бэкенд отправляет события в Kafka
 Rel(backend, kafka, "Kafka Producer", "JSON сообщения (регистрационные письма)")
 
 ' Планировщик читает данные для отчетов
-Rel(scheduler, mysql, "JPA/Hibernate", "Read-only запросы для генерации отчетов")
+Rel(CronService, PostgreSQL, "JPA/Hibernate", "Read-only запросы для генерации отчетов")
 
 ' Планировщик отправляет отчеты в Kafka
-Rel(scheduler, kafka, "Kafka Producer", "Ежедневные отчеты по задачам")
+Rel(CronService, kafka, "Kafka Producer", "Ежедневные отчеты по задачам")
 
 ' Email сервис потребляет задачи из Kafka
 Rel(kafka, email_sender, "Kafka Consumer", "Задачи на отправку email")
 
 ' Email сервис отправляет письма через Mailjet
-Rel(email_sender, mailjet, "SMTP Protocol", "Отправка приветственных писем и отчетов")
+Rel(email_sender, mailhog, "SMTP Protocol", "Отправка приветственных писем и отчетов")
 
 ' Легенда
 SHOW_LEGEND()

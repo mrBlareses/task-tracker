@@ -2,17 +2,21 @@
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
-# копируем только то, что нужно для установки зависимостей
+# wrapper из корня
 COPY gradlew .
 COPY gradle ./gradle
-COPY build.gradle settings.gradle gradle.properties ./
+COPY settings.gradle .
+
+# дальше — backend-service
+COPY backend-service/gradle.properties ./gradle.properties
+COPY backend-service/build.gradle ./build.gradle
 
 # прогреваем зависимости
 RUN chmod +x ./gradlew && ./gradlew --no-daemon dependencies
 
-# копируем исходники и openapi спеки
-COPY src ./src
-COPY openapi ./openapi
+# исходники и openapi из backend-service
+COPY backend-service/src ./src
+COPY backend-service/openapi ./openapi
 
 # собираем bootJar
 RUN ./gradlew --no-daemon clean bootJar -x test
@@ -27,6 +31,4 @@ USER appuser
 COPY --from=build /app/build/libs/*.jar app.jar
 
 EXPOSE 8081
-ENV JAVA_OPTS=""
-
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
+ENTRYPOINT ["java","-jar","/app/app.jar"]
