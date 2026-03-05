@@ -128,7 +128,6 @@ tasks:
     desc: Полный сброс окружения — удаление volumes, пересборка образа и запуск
     cmds:
       - task docker-compose-clean
-      - task rebuild
       - task docker-compose-up
 
   down:
