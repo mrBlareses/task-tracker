@@ -35,7 +35,7 @@
 Основные компоненты:
 - Backend Service: REST API для регистрации, авторизации (JWT), работы с задачами (создание, редактирование, удаление, пометка как выполненной).
 - Scheduler Service: Генерация ежедневных отчетов по задачам (Spring Scheduler запускает задачи по cron в полночь).
-- Email Sender Service: Отправка email (приветственные письма при регистрации, ежедневные отчеты) через Mailjet с использованием Spring Mail.
+- Email Sender Service: Отправка email (приветственные письма при регистрации, ежедневные отчеты) через MailHog с использованием Spring Mail.
 - Postgres: хранение пользователей и задач.
 - Kafka + Zookeeper: брокер сообщений для асинхронной коммуникации между сервисами (публикация/обработка событий и команд).
 - MailHog (dev): локальный SMTP сервер + web UI для просмотра писем во время разработки.
@@ -183,13 +183,6 @@ task docker-compose-logs
 ```bash
 docker ps
 ```
-Проверить занятые порты (Windows):
-```bash
-netstat -ano | findstr :8081
-netstat -ano | findstr :5432
-netstat -ano | findstr :9092
-```
----
 
 # Конфигурация
 Все настройки выполняются через переменные окружения.
@@ -292,10 +285,10 @@ Postman автоматически создаст коллекцию со все
 │           ├── java/
 │           └── resources/
 ├── diagrams/
-│   ├── component.png
+│   ├── BackendServiceComponentDiagramWithOpenAPI.png
 │   ├── component.puml
 │   ├── context.png
-│   └── context.puml
+│   └── TaskTrackerArchitecture.puml
 ├── gradle/
 │   └── wrapper/
 │       ├── gradle-wrapper.jar
