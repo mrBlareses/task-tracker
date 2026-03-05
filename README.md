@@ -45,13 +45,13 @@
 
 > Исходники диаграмм — в `diagrams/*.puml`. Для удобства в README используются рендеры в PNG.
 
-### Контекстная диаграмма
+### Компонентная диаграмма
 
-![C4 Context](diagrams/BackendServiceComponentDiagramWithOpenAPI.png)
+![C4 Component](diagrams/BackendServiceComponentDiagramWithOpenAPI.png)
 
-### Компонентная диаграмма Backend Service
+### Контекстная диаграмма Backend Service
 
-![Backend Service Component](diagrams/TaskTrackerArchitecture.png)
+![Backend Service Context](diagrams/TaskTrackerArchitecture.png)
 
 ### [Контекстная диаграмма](diagrams/context.puml) 
 - Описание взаимодействия системы с внешними пользователями и системами

@@ -1,12 +1,8 @@
 # VCS / IDE
 .git
-.idea
+.idea/
 *.iml
-.vscode
-
-# Gradle caches & build outputs (не копируем!)
-backend-service/.gradle
-build
+.vscode/
 
 # OS
 .DS_Store
@@ -17,3 +13,14 @@ Thumbs.db
 
 # Env
 .env
+
+# Gradle wrapper
+!gradle/wrapper/gradle-wrapper.jar
+!gradlew
+!gradlew.bat
+
+# Gradle caches & build outputs
+backend-service/.gradle/
+backend-service/build/
+backend-service/out/
+backend-service/target/

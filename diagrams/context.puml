@@ -1,52 +1,29 @@
 @startuml TaskTrackerArchitecture
 !includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
-' Акторы
 Person(user, "Пользователь", "Создает и управляет задачами через веб-интерфейс или мобильное приложение")
 
-' Внешние системы
-System_Ext(mailhog, "Mailhog", "Внешний email-сервис для отправки писем")
+System_Ext(mailhog, "Mailhog (SMTP)", "SMTP сервер для dev среды")
 
 System_Boundary(System_TaskTracker, "Task Tracker Microservice Platform") {
 
-  ' Основной бэкенд сервис
-  Container(backend, "Backend Service", "Spring Boot, Spring Security, JWT", "REST API, аутентификация, бизнес-логика задач и пользователей")
+  Container(backend, "Backend Service", "Spring Boot, Spring Security, JWT, Spring Kafka", "REST API, бизнес-логика пользователей и задач. Генерирует email payload и публикует в Kafka")
+  Container(cronService, "Cron Service", "Spring Boot, Spring Scheduler", "Планировщик задач. Триггерит Backend на генерацию ежедневной аналитики")
+  Container(emailSender, "Email Sender Service", "Spring Boot, Spring Mail, Spring Kafka", "Потребляет готовые email payload из Kafka и отправляет письма через SMTP")
 
-  ' Сервисы фоновых процессов
-  Container(CronService, "CronService", "Spring Boot, Spring Scheduler, Spring Kafka", "Генерация ежедневных отчетов по задачам")
-  Container(email_sender, "Email Sender Service", "Spring Boot, Spring Mail, Spring Kafka", "Отправка email через SMTP")
-
-  ' Базы данных
-  ContainerDb(PostgreSQL, "PostgreSQL Database", "PostgreSQL 15", "Хранение пользователей, задач, системных данных")
-
-  ' Брокер сообщений
-  Container(kafka, "Kafka Message Broker", "Apache Kafka", "Асинхронная коммуникация между сервисами через топик EMAIL_SENDING_TASKS")
+  ContainerDb(postgres, "PostgreSQL Database", "PostgreSQL 15", "Хранение пользователей, задач и системных данных")
+  Container(kafka, "Kafka Message Broker", "Apache Kafka", "Асинхронная коммуникация. Топик EMAIL_SENDING_TASKS")
 }
 
-' Взаимодействия
+Rel(user, backend, "HTTP/REST API", "JWT")
+Rel(backend, postgres, "JPA/Hibernate", "CRUD users/tasks")
 
-' Пользователь взаимодействует с бэкендом
-Rel(user, backend, "HTTP/REST API", "JWT аутентификация")
+Rel(cronService, backend, "HTTP/REST", "POST /api/v1/service/daily-analytics")
 
-' Бэкенд работает с базой данных
-Rel(backend, PostgreSQL, "JPA/Hibernate", "CRUD операции пользователей и задач")
+Rel(backend, kafka, "Kafka Producer", "Email payload (JSON)")
+Rel(kafka, emailSender, "Kafka Consumer", "Email payload")
 
-' Бэкенд отправляет события в Kafka
-Rel(backend, kafka, "Kafka Producer", "JSON сообщения (регистрационные письма)")
+Rel(emailSender, mailhog, "SMTP", "Отправка писем")
 
-' Планировщик читает данные для отчетов
-Rel(CronService, PostgreSQL, "JPA/Hibernate", "Read-only запросы для генерации отчетов")
-
-' Планировщик отправляет отчеты в Kafka
-Rel(CronService, kafka, "Kafka Producer", "Ежедневные отчеты по задачам")
-
-' Email сервис потребляет задачи из Kafka
-Rel(kafka, email_sender, "Kafka Consumer", "Задачи на отправку email")
-
-' Email сервис отправляет письма через Mailjet
-Rel(email_sender, mailhog, "SMTP Protocol", "Отправка приветственных писем и отчетов")
-
-' Легенда
 SHOW_LEGEND()
-
 @enduml
