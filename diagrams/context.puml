@@ -12,7 +12,7 @@ System_Boundary(System_TaskTracker, "Task Tracker Microservice Platform") {
   Container(emailSender, "Email Sender Service", "Spring Boot, Spring Mail, Spring Kafka", "Потребляет готовые email payload из Kafka и отправляет письма через SMTP")
 
   ContainerDb(postgres, "PostgreSQL Database", "PostgreSQL 15", "Хранение пользователей, задач и системных данных")
-  Container(kafka, "Kafka Message Broker", "Apache Kafka", "Асинхронная коммуникация. Топик EMAIL_SENDING_TASKS")
+  Container(kafka, "Kafka Message Broker", "Apache Kafka", "Топики: daily-report, user-registered")
 }
 
 Rel(user, backend, "HTTP/REST API", "JWT")
