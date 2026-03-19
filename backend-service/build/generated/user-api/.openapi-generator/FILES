@@ -1,0 +1,15 @@
+.openapi-generator-ignore
+README.md
+pom.xml
+src/main/java/org/mushroom/api/ApiUtil.java
+src/main/java/org/mushroom/api/AuthenticationApi.java
+src/main/java/org/mushroom/api/UsersApi.java
+src/main/java/org/mushroom/model/AuthenticationResponse.java
+src/main/java/org/mushroom/model/ErrorResponse.java
+src/main/java/org/mushroom/model/LoginRequest.java
+src/main/java/org/mushroom/model/LogoutResponse.java
+src/main/java/org/mushroom/model/MessageRequest.java
+src/main/java/org/mushroom/model/UserRegistrationRequest.java
+src/main/java/org/mushroom/model/UserRegistrationResponse.java
+src/main/java/org/mushroom/model/UserResponse.java
+src/main/java/org/mushroom/model/UserUpdateRequest.java

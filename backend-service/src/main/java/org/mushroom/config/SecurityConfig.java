@@ -50,6 +50,9 @@ public class SecurityConfig {
                         .requestMatchers(mvc.pattern("/api/v1/users/register")).permitAll()
                         .requestMatchers(mvc.pattern("/api/v1/auth/login")).permitAll()
                         .requestMatchers(mvc.pattern("/api/v1/auth/logout")).authenticated()
+
+                        .requestMatchers(mvc.pattern("/api/v1/service/daily-analytics/run")).permitAll()
+
                         .requestMatchers(mvc.pattern("/api/v1/admin/**")).hasRole("ADMIN")
                         .requestMatchers(mvc.pattern("/api/v1/users/**")).authenticated()
                         .requestMatchers(mvc.pattern("/api/v1/service/**")).hasRole("SERVICE")

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="1" author="MRBLARE" runOnChange="false">
+        <sql>
+            <![CDATA[
+            CREATE TABLE users
+            (
+                id         UUID PRIMARY KEY      DEFAULT gen_random_uuid(),
+                email      VARCHAR(35)  NOT NULL UNIQUE,
+                password   VARCHAR(16)  NOT NULL,
+                firstname  VARCHAR(120) NOT NULL,
+                lastname   VARCHAR(120) NOT NULL,
+                created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+            );
+            ]]>
+        </sql>
+        <comment>Create table users with unique email</comment>
+    </changeSet>
+    <changeSet id="2" author="MRBLARE" runOnChange="false">
+        <sql>
+            <![CDATA[
+            CREATE TABLE roles
+            (
+                id        UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id   UUID        NOT NULL,
+                role_name VARCHAR(60) NOT NULL,
+                CONSTRAINT fk_roles_user_id
+                   FOREIGN KEY (user_id)
+                   REFERENCES users (id)
+                   ON DELETE CASCADE
+            );
+
+            CREATE INDEX idx_roles_user_id ON roles (user_id);
+            ]]>
+        </sql>
+        <comment>Create roles table</comment>
+    </changeSet>
+    <changeSet id="3" author="MRBLARE" runOnChange="false">
+        <sql>
+            <![CDATA[
+            ALTER TABLE users ALTER COLUMN password TYPE VARCHAR(100);
+            ]]>
+        </sql>
+        <comment>Extend password field length for BCrypt hashing</comment>
+    </changeSet>
+    <changeSet id="4" author="MRBLARE">
+        <sql>
+            <![CDATA[
+            CREATE TABLE tasks
+            (
+                id          UUID PRIMARY KEY      DEFAULT gen_random_uuid(),
+                title       VARCHAR(255) NOT NULL,
+                description TEXT,
+                status      VARCHAR(20)  NOT NULL DEFAULT 'TODO',
+                user_id     UUID         NOT NULL,
+                created_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                CONSTRAINT fk_tasks_user_id
+                    FOREIGN KEY (user_id)
+                    REFERENCES users (id)
+                    ON DELETE CASCADE
+            );
+
+            CREATE INDEX idx_tasks_user_id ON tasks (user_id);
+            ]]>
+        </sql>
+    </changeSet>
+
+    <changeSet id="5" author="MRBLARE" runOnChange="false">
+        <comment>Create SERVICE user and ensure SERVICE role</comment>
+        <sql><![CDATA[
+            INSERT INTO users (id, email, password, firstname, lastname)
+            VALUES (gen_random_uuid(),
+                    'service@local',
+                    '$2a$10$kT1V2Ww6GkO0N6nBq0Q3cOAh7Y6WJ0XvW0sC8xA8L6G1yB0ZrF2eK',
+                    'Service',
+                    'Account') ON CONFLICT (email) DO NOTHING;
+
+            INSERT INTO roles (user_id, role_name)
+            SELECT u.id, 'SERVICE'
+            FROM users u
+            WHERE u.email = 'service@local'
+              AND NOT EXISTS (
+                SELECT 1
+                FROM roles r
+                WHERE r.user_id = u.id
+                  AND r.role_name = 'SERVICE'
+            );
+            ]]></sql>
+    </changeSet>
+</databaseChangeLog>

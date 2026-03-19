@@ -1,4 +1,4 @@
-package org.example.config;
+package org.mushroom.config;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -10,6 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class SchedulerProperties {
 
     private String expression;
-
     private String zone;
+    private String backendBaseUrl;
+    private String triggerPath;
 }

@@ -1,4 +1,4 @@
-package org.example.config;
+package org.mushroom.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;

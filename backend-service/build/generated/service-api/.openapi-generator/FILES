@@ -1,0 +1,7 @@
+.openapi-generator-ignore
+README.md
+pom.xml
+src/main/java/org/mushroom/service/api/ApiUtil.java
+src/main/java/org/mushroom/service/api/ServiceAnalyticsApi.java
+src/main/java/org/mushroom/service/model/DailyReport.java
+src/main/java/org/mushroom/service/model/ErrorResponse.java

@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: cron-service
+
+server:
+  port: 8082
+
+cron:
+  daily-analytics:
+    expression: ${CRON_DAILY_ANALYTICS_EXPRESSION:0 */1 * * * *}
+    zone: ${CRON_DAILY_ANALYTICS_ZONE:UTC}
+    backend-base-url: ${CRON_DAILY_ANALYTICS_BACKEND_BASE_URL:http://backend-service:8081}
+    trigger-path: ${CRON_DAILY_ANALYTICS_TRIGGER_PATH:/api/v1/service/daily-analytics/run}
+
+auth:
+  url: http://localhost:8081
+  login-endpoint: /api/v1/auth/login
+
+backend:
+  url: http://localhost:8081
+  analytics-endpoint: /api/v1/service/daily-analytics
+
+retry:
+  max-attempts: 3
+  delay: 2s
+
+  spring:
+    datasource:
+      url: jdbc:postgresql://localhost:5432/task_tracker
+      username: postgres
+      password: postgres
+
+    jpa:
+      hibernate:
+      ddl-auto: validate
+
+    liquibase:
+    enabled: true

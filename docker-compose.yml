@@ -63,7 +63,7 @@ services:
   backend-service:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: backend-service/Dockerfile
     depends_on:
         postgres:
           condition: service_healthy
@@ -82,6 +82,21 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
       SERVER_PORT: ${SERVER_PORT}
+    restart: unless-stopped
+    networks:
+      - task-tracker-net
+  cron-service:
+    build:
+      context: .
+      dockerfile: cron-service/Dockerfile
+    depends_on:
+      backend-service:
+        condition: service_started
+    env_file:
+      - ./.env
+    environment:
+      CRON_DAILY_ANALYTICS_EXPRESSION: ${CRON_DAILY_ANALYTICS_EXPRESSION:-0 */1 * * * *}
+      CRON_DAILY_ANALYTICS_ZONE: ${CRON_DAILY_ANALYTICS_ZONE:-UTC}
     restart: unless-stopped
     networks:
       - task-tracker-net
