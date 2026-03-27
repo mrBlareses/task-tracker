@@ -90,6 +90,8 @@ services:
       context: .
       dockerfile: cron-service/Dockerfile
     depends_on:
+      postgres:
+        condition: service_healthy
       backend-service:
         condition: service_started
     env_file:
@@ -97,6 +99,12 @@ services:
     environment:
       CRON_DAILY_ANALYTICS_EXPRESSION: ${CRON_DAILY_ANALYTICS_EXPRESSION:-0 */1 * * * *}
       CRON_DAILY_ANALYTICS_ZONE: ${CRON_DAILY_ANALYTICS_ZONE:-UTC}
+      CRON_DAILY_ANALYTICS_BACKEND_BASE_URL: http://backend-service:8081
+      CRON_DAILY_ANALYTICS_TRIGGER_PATH: /api/v1/service/daily-analytics/run
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
     restart: unless-stopped
     networks:
       - task-tracker-net

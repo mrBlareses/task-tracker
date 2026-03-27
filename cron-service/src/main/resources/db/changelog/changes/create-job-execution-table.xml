@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+            http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="001-create-job-execution-table" author="openai">
+        <sql>
+            <![CDATA[
+            CREATE TABLE job_execution
+            (
+                id UUID PRIMARY KEY,
+                job_name VARCHAR(100) NOT NULL,
+                status VARCHAR(20) NOT NULL,
+                trigger_type VARCHAR(20) NOT NULL,
+                started_at TIMESTAMPTZ NOT NULL,
+                finished_at TIMESTAMPTZ,
+                error_message TEXT
+            );
+
+            CREATE INDEX idx_job_execution_job_name ON job_execution(job_name);
+            CREATE INDEX idx_job_execution_status ON job_execution(status);
+            CREATE INDEX idx_job_execution_started_at ON job_execution(started_at);
+            ]]>
+        </sql>
+    </changeSet>
+</databaseChangeLog>
