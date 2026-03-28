@@ -21,6 +21,12 @@ public class JobExecutionServiceImpl implements JobExecutionService {
     private final JobExecutionRepository jobExecutionRepository;
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean hasRunningExecution(String jobName) {
+        return jobExecutionRepository.existsByJobNameAndStatus(jobName, JobExecutionStatus.RUNNING);
+    }
+
+    @Override
     @Transactional
     public JobExecutionEntity createRunningExecution(String jobName, TriggerType triggerType) {
         JobExecutionEntity execution = JobExecutionEntity.builder()
@@ -35,6 +41,27 @@ public class JobExecutionServiceImpl implements JobExecutionService {
 
         log.info("Created RUNNING job execution: id={}, jobName={}, triggerType={}",
                 savedExecution.getId(), savedExecution.getJobName(), savedExecution.getTriggerType());
+
+        return savedExecution;
+    }
+
+    @Override
+    @Transactional
+    public JobExecutionEntity createSkippedExecution(String jobName, TriggerType triggerType, String reason) {
+        JobExecutionEntity execution = JobExecutionEntity.builder()
+                .id(UUID.randomUUID())
+                .jobName(jobName)
+                .status(JobExecutionStatus.SKIPPED)
+                .triggerType(triggerType)
+                .startedAt(OffsetDateTime.now())
+                .finishedAt(OffsetDateTime.now())
+                .errorMessage(reason)
+                .build();
+
+        JobExecutionEntity savedExecution = jobExecutionRepository.save(execution);
+
+        log.info("Created SKIPPED job execution: id={}, jobName={}, triggerType={}, reason={}",
+                savedExecution.getId(), savedExecution.getJobName(), savedExecution.getTriggerType(), reason);
 
         return savedExecution;
     }

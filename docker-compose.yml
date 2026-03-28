@@ -94,9 +94,13 @@ services:
         condition: service_healthy
       backend-service:
         condition: service_started
+    ports:
+      - "8082:8082"
     env_file:
       - ./.env
     environment:
+      SERVER_PORT: 8082
+
       CRON_DAILY_ANALYTICS_EXPRESSION: ${CRON_DAILY_ANALYTICS_EXPRESSION:-0 */1 * * * *}
       CRON_DAILY_ANALYTICS_ZONE: ${CRON_DAILY_ANALYTICS_ZONE:-UTC}
       CRON_DAILY_ANALYTICS_BACKEND_BASE_URL: http://backend-service:8081
