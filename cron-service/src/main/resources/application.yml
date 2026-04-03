@@ -1,18 +1,18 @@
 server:
-  port: 8082
+  port: ${SERVER_PORT}
 
 spring:
   application:
     name: cron-service
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/task_tracker_db}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
-    show-sql: true
+    show-sql: false
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: validate
@@ -21,17 +21,23 @@ spring:
     change-log: classpath:/db/changelog/changelog-master.xml
     enabled: true
 
+auth:
+  base-url: ${AUTH_BASE_URL}
+  login-endpoint: ${AUTH_LOGIN_ENDPOINT}
+  email: ${AUTH_EMAIL}
+  password: ${AUTH_PASSWORD}
+
 cron:
   daily-analytics:
-    expression: ${CRON_DAILY_ANALYTICS_EXPRESSION:0 */1 * * * *}
-    zone: ${CRON_DAILY_ANALYTICS_ZONE:UTC}
-    backend-base-url: ${CRON_DAILY_ANALYTICS_BACKEND_BASE_URL:http://backend-service:8081}
-    trigger-path: ${CRON_DAILY_ANALYTICS_TRIGGER_PATH:/api/v1/service/daily-analytics/run}
-
-auth:
-  url: http://backend-service:8081
-  login-endpoint: /api/v1/auth/login
+    expression: ${CRON_DAILY_ANALYTICS_EXPRESSION}
+    zone: ${CRON_DAILY_ANALYTICS_ZONE}
+    backend-base-url: ${CRON_DAILY_ANALYTICS_BACKEND_BASE_URL}
+    trigger-path: ${CRON_DAILY_ANALYTICS_TRIGGER_PATH}
+    stale-threshold: ${CRON_DAILY_ANALYTICS_STALE_THRESHOLD}
 
 retry:
-  max-attempts: 3
-  delay: 2s
+  daily-analytics:
+    max-attempts: ${RETRY_DAILY_ANALYTICS_MAX_ATTEMPTS}
+    first-backoff: ${RETRY_DAILY_ANALYTICS_FIRST_BACKOFF}
+    second-backoff: ${RETRY_DAILY_ANALYTICS_SECOND_BACKOFF}
+    third-backoff: ${RETRY_DAILY_ANALYTICS_THIRD_BACKOFF}

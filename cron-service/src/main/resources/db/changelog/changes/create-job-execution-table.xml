@@ -6,7 +6,7 @@
             http://www.liquibase.org/xml/ns/dbchangelog
             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-    <changeSet id="001-create-job-execution-table" author="openai">
+    <changeSet id="1" author="mrBlareses">
         <sql>
             <![CDATA[
             CREATE TABLE job_execution
@@ -16,13 +16,18 @@
                 status VARCHAR(20) NOT NULL,
                 trigger_type VARCHAR(20) NOT NULL,
                 started_at TIMESTAMPTZ NOT NULL,
-                finished_at TIMESTAMPTZ,
-                error_message TEXT
+                finished_at TIMESTAMPTZ
             );
 
-            CREATE INDEX idx_job_execution_job_name ON job_execution(job_name);
-            CREATE INDEX idx_job_execution_status ON job_execution(status);
-            CREATE INDEX idx_job_execution_started_at ON job_execution(started_at);
+            CREATE INDEX idx_job_execution_job_name
+                ON job_execution(job_name);
+
+            CREATE INDEX idx_job_execution_started_at
+                ON job_execution(started_at);
+
+            CREATE UNIQUE INDEX uq_job_execution_running
+                ON job_execution(job_name)
+                WHERE status = 'RUNNING';
             ]]>
         </sql>
     </changeSet>

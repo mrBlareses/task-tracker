@@ -23,7 +23,7 @@ public class DailyAnalyticsScheduler {
 
         try {
             dailyAnalyticsTriggerService.trigger(TriggerType.CRON);
-            log.info("Daily Analytics cron job triggered successfully");
+            log.info("Daily Analytics cron job finished");
         } catch (Exception ex) {
             log.error("Failed to trigger Daily Analytics job", ex);
         }

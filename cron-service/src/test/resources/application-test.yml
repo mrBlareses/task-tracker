@@ -1,0 +1,30 @@
+server:
+  port: 0
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    enabled: true
+
+auth:
+  base-url: http://localhost:8080
+  login-endpoint: /api/v1/auth/login
+  email: test@example.com
+  password: test-password
+
+retry:
+  daily-analytics:
+    max-attempts: 3
+    first-backoff: 0ms
+    second-backoff: 0ms
+    third-backoff: 0ms
+
+cron:
+  daily-analytics:
+    expression: "0 0 * * * *"
+    zone: "UTC"
+    backend-base-url: http://localhost:8081
+    trigger-path: /api/v1/service/daily-analytics/run
+    stale-threshold: 15m

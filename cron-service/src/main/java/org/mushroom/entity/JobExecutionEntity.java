@@ -36,7 +36,4 @@ public class JobExecutionEntity {
 
     @Column(name = "finished_at")
     private OffsetDateTime finishedAt;
-
-    @Column(name = "error_message")
-    private String errorMessage;
 }
