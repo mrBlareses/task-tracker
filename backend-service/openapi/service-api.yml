@@ -8,14 +8,12 @@ servers:
   - url: http://localhost:8081
 
 paths:
-  /api/v1/service/daily-analytics:
-    get:
-      summary: Build daily task analytics for all users (service-only)
+  /api/v1/service/daily-analytics/run:
+    post:
+      summary: Trigger daily analytics build for all users
       operationId: collectDailyAnalytics
       tags:
         - ServiceAnalytics
-      security:
-        - bearerAuth: [ ]
       responses:
         '202':
           description: Daily analytics accepted for processing
@@ -34,31 +32,6 @@ paths:
 
 components:
   schemas:
-    DailyReport:
-      type: object
-      required:
-        - userId
-        - email
-        - pendingCount
-        - completedCount
-      properties:
-        userId:
-          type: string
-          format: uuid
-          description: User identifier.
-        email:
-          type: string
-          format: email
-          description: User email.
-        pendingCount:
-          type: integer
-          format: int32
-          description: Count of tasks with status TODO or IN_PROGRESS.
-        completedCount:
-          type: integer
-          format: int32
-          description: Count of tasks marked DONE during [from, to).
-
     ErrorResponse:
       type: object
       required:

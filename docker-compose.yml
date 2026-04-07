@@ -63,7 +63,7 @@ services:
   backend-service:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: backend-service/Dockerfile
     depends_on:
         postgres:
           condition: service_healthy
@@ -82,6 +82,43 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
       SERVER_PORT: ${SERVER_PORT}
+    restart: unless-stopped
+    networks:
+      - task-tracker-net
+  cron-service:
+    build:
+      context: .
+      dockerfile: cron-service/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend-service:
+        condition: service_started
+    ports:
+      - "8082:8082"
+    env_file:
+      - ./.env
+    environment:
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/task_tracker_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
+      AUTH_BASE_URL: http://backend-service:8081
+      AUTH_LOGIN_ENDPOINT: /api/v1/auth/login
+      AUTH_EMAIL: service@local
+      AUTH_PASSWORD: service123
+
+      CRON_DAILY_ANALYTICS_EXPRESSION: "0 */1 * * * *"
+      CRON_DAILY_ANALYTICS_ZONE: UTC
+      CRON_DAILY_ANALYTICS_BACKEND_BASE_URL: http://backend-service:8081
+      CRON_DAILY_ANALYTICS_TRIGGER_PATH: /api/v1/service/daily-analytics/run
+      CRON_DAILY_ANALYTICS_STALE_THRESHOLD: PT15M
+
+      RETRY_DAILY_ANALYTICS_MAX_ATTEMPTS: 3
+      RETRY_DAILY_ANALYTICS_FIRST_BACKOFF: 1s
+      RETRY_DAILY_ANALYTICS_SECOND_BACKOFF: 2s
+      RETRY_DAILY_ANALYTICS_THIRD_BACKOFF: 5s
     restart: unless-stopped
     networks:
       - task-tracker-net

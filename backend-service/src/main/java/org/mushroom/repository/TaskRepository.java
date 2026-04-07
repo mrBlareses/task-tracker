@@ -47,3 +47,10 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
             """, nativeQuery = true)
     List<UserDailyReportProjection> getDailyReports();
 }
+// 1. Позитивный сценарий
+// 2. Негативный сценарий
+// 3. JsonB хранение данных о задачах loqfile
+// 4. ShedLock
+
+// диаграмма контекста а-> b-> c->...
+// диаграмма компонентов для кронСервиса
