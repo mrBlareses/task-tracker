@@ -1,0 +1,41 @@
+server:
+  port: ${SERVER_PORT:8083}
+
+spring:
+  application:
+    name: email-sender-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+
+  liquibase:
+    change-log: db/changelog/changelog-master.xml
+    enabled: true
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: ${SPRING_KAFKA_CONSUMER_GROUP_ID:email-sender-service}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: "org.mushroom.model"
+        spring.json.value.default.type: org.mushroom.model.EmailRequestedEvent
+        spring.json.use.type.headers: false
+
+email-ingestion:
+  topic: ${APP_KAFKA_TOPICS_USER_REGISTERED:user-registered}
+  concurrency: ${EMAIL_INGESTION_CONCURRENCY:1}
+  retry-interval-ms: ${EMAIL_INGESTION_RETRY_INTERVAL_MS:2000}
+  retry-max-attempts: ${EMAIL_INGESTION_RETRY_MAX_ATTEMPTS:3}

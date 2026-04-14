@@ -5,10 +5,11 @@ WORKDIR /app
 COPY gradlew .
 COPY gradle ./gradle
 COPY settings.gradle .
-
+COPY backend-service ./backend-service
 COPY cron-service ./cron-service
+COPY email-sender-service ./email-sender-service
 
-RUN chmod +x ./gradlew && ./gradlew --no-daemon :cron-service:clean :cron-service:bootJar -x test
+RUN sed -i 's/\r$//' ./gradlew && chmod +x ./gradlew && ./gradlew --no-daemon :cron-service:clean :cron-service:bootJar -x test
 
 # ---------- runtime stage ----------
 FROM eclipse-temurin:21-jre

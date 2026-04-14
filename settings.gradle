@@ -1,2 +1,17 @@
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+    }
+}
+
 rootProject.name = 'task-tracker'
+include 'backend-service'
 include 'cron-service'
+include 'email-sender-service'

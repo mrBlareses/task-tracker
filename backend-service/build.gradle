@@ -70,6 +70,7 @@ dependencies {
     // TEST
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     // Testcontainers
     testImplementation enforcedPlatform("org.testcontainers:testcontainers-bom:1.21.3")

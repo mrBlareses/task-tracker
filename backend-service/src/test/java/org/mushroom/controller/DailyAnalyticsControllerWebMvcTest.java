@@ -32,35 +32,35 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class DailyAnalyticsControllerWebMvcTest {
 
-    private static final String URL = "/api/v1/service/daily-analytics";
+    private static final String URL = "/api/v1/service/daily-analytics/run";
 
     @Autowired
-    MockMvc mockMvc;
+    private MockMvc mockMvc;
 
     @MockBean
-    DailyAnalyticsService dailyAnalyticsService;
+    private DailyAnalyticsService dailyAnalyticsService;
 
     @MockBean
-    Clock clock;
+    private Clock clock;
 
     @Test
     @DisplayName("Контроллер возвращает 202 при успешном запуске аналитики")
     void shouldReturn202_whenRequestIsValid() throws Exception {
-        mockMvc.perform(get(URL))
+        mockMvc.perform(post(URL))
                 .andExpect(status().isAccepted());
     }
 
     @Test
     @DisplayName("Контроллер возвращает 405 если используется неверный HTTP метод")
     void shouldReturn405_whenWrongHttpMethod() throws Exception {
-        mockMvc.perform(post(URL))
+        mockMvc.perform(get(URL))
                 .andExpect(status().isMethodNotAllowed());
     }
 
     @Test
-    @DisplayName("Контроллер возвращает 500 если сервис выбрасывает исключение")
+    @DisplayName("Контроллер возвращает 404 если URL не существует")
     void shouldReturn404_whenWrongUrl() throws Exception {
-        mockMvc.perform(get("/api/v1/service/wrong-endpoint"))
+        mockMvc.perform(post("/api/v1/service/wrong-endpoint"))
                 .andExpect(status().isNotFound());
     }
 }

@@ -123,6 +123,32 @@ services:
     networks:
       - task-tracker-net
 
+  email-sender-service:
+    build:
+      context: .
+      dockerfile: email-sender-service/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    env_file:
+      - ./.env
+    environment:
+      SERVER_PORT: 8083
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/task_tracker_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_CONSUMER_GROUP_ID: email-sender-service
+      EMAIL_INGESTION_TOPIC: user-registered
+      EMAIL_INGESTION_CONCURRENCY: 1
+    restart: unless-stopped
+    networks:
+      - task-tracker-net
+
 volumes:
   postgres_data:
   kafka_data:
