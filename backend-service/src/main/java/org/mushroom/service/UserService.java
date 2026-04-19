@@ -49,7 +49,8 @@ public class UserService {
 
             User savedUser = userRepository.save(user);
 
-            eventPublisher.publishUserRegistrationEvent(savedUser.getEmail());
+            eventPublisher.publishUserRegistrationEvent(savedUser);
+
             return userMapper.toRegistrationResponse(savedUser);
 
         } catch (DataIntegrityViolationException e) {

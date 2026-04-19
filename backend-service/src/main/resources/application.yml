@@ -2,6 +2,8 @@ server:
   port: ${SERVER_PORT:8081}
 
 spring:
+  application:
+    name: backend-service
 
   datasource:
     url: ${SPRING_DATASOURCE_URL}
@@ -10,27 +12,24 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   jpa:
-    show-sql: true
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
     hibernate:
       ddl-auto: validate
 
   liquibase:
-    change-log: classpath:db.changelog/changelog-master.xml
+    change-log: db/changelog/changelog-master.xml
     enabled: true
 
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
-
     producer:
-      acks: ${SPRING_KAFKA_PRODUCER_ACKS}
-      retries: ${SPRING_KAFKA_PRODUCER_RETRIES}
-      key-serializer: ${SPRING_KAFKA_PRODUCER_KEY_SERIALIZER}
-      value-serializer: ${SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER}
-
+      acks: ${SPRING_KAFKA_PRODUCER_ACKS:all}
+      retries: ${SPRING_KAFKA_PRODUCER_RETRIES:5}
+      key-serializer: ${SPRING_KAFKA_PRODUCER_KEY_SERIALIZER:org.apache.kafka.common.serialization.StringSerializer}
+      value-serializer: ${SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER:org.springframework.kafka.support.serializer.JsonSerializer}
       properties:
-        enable.idempotence: ${SPRING_KAFKA_PRODUCER_ENABLE_IDEMPOTENCE}
-        max.in.flight.requests.per.connection: ${SPRING_KAFKA_PRODUCER_MAX_IN_FLIGHT}
+        enable.idempotence: ${SPRING_KAFKA_PRODUCER_ENABLE_IDEMPOTENCE:true}
+        max.in.flight.requests.per.connection: ${SPRING_KAFKA_PRODUCER_MAX_IN_FLIGHT:5}
 
 jwt:
   secret: ${JWT_SECRET}
@@ -38,5 +37,5 @@ jwt:
 app:
   kafka:
     topics:
-      daily-report: daily-report
-      user-registered: user-registered
+      daily-report: ${APP_KAFKA_TOPIC_DAILY_REPORT:daily-report}
+      user-registered: ${APP_KAFKA_TOPIC_USER_REGISTERED:user-registered}

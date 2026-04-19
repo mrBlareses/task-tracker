@@ -1,24 +1,27 @@
 package org.mushroom.consumer;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.invocation.Invocation;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mushroom.entity.enums.OutboxEmailType;
-import org.mushroom.model.EmailRequestedEvent;
+import org.mushroom.exception.EmailEventValidationException;
 import org.mushroom.service.EmailIngestionService;
 import org.springframework.kafka.support.Acknowledgment;
 
+import java.util.Collection;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mockingDetails;
 
 @ExtendWith(MockitoExtension.class)
 class EmailRequestKafkaListenerUnitTest {
@@ -29,84 +32,134 @@ class EmailRequestKafkaListenerUnitTest {
     @Mock
     private Acknowledgment acknowledgment;
 
-    @InjectMocks
+    private ObjectMapper objectMapper;
     private EmailRequestKafkaListener emailRequestKafkaListener;
 
-    @Test
-    @DisplayName("listen — вызывает acknowledge, если ingest вернул true")
-    void listen_ShouldAcknowledge_WhenIngestReturnedTrue() {
-        EmailRequestedEvent event = EmailRequestedEvent.builder()
-                .type(OutboxEmailType.WELCOME)
-                .payload(Map.of(
-                        "email", "user1@test.local",
-                        "id", 1
-                ))
-                .build();
-
-        ConsumerRecord<String, EmailRequestedEvent> record =
-                new ConsumerRecord<>("user-registered", 0, 0L, "key-1", event);
-
-        AtomicInteger acknowledgeCalls = new AtomicInteger(0);
-
-        when(emailIngestionService.ingest(event)).thenReturn(true);
-
-        doAnswer(invocation -> {
-            acknowledgeCalls.incrementAndGet();
-            return null;
-        }).when(acknowledgment).acknowledge();
-
-        emailRequestKafkaListener.listen(record, acknowledgment);
-
-        assertThat(acknowledgeCalls.get()).isEqualTo(1);
+    @BeforeEach
+    void setUp() {
+        objectMapper = new ObjectMapper();
+        emailRequestKafkaListener = new EmailRequestKafkaListener(emailIngestionService);
     }
 
     @Test
-    @DisplayName("listen — вызывает acknowledge, если ingest вернул false")
-    void listen_ShouldAcknowledge_WhenIngestReturnedFalse() {
-        EmailRequestedEvent event = EmailRequestedEvent.builder()
-                .type(OutboxEmailType.WELCOME)
-                .payload(Map.of(
+    @DisplayName("listenUserRegistered — вызывает acknowledge при успешной обработке")
+    void listenUserRegistered_ShouldAcknowledge_WhenProcessingSucceeded() throws Exception {
+        JsonNode kafkaEventNode = buildKafkaEventNode(
+                Map.of(
+                        "id", "1",
                         "email", "user1@test.local",
-                        "id", 1
-                ))
-                .build();
+                        "firstName", "John",
+                        "lastName", "Doe"
+                )
+        );
 
-        ConsumerRecord<String, EmailRequestedEvent> record =
-                new ConsumerRecord<>("user-registered", 0, 0L, "key-1", event);
+        ConsumerRecord<String, JsonNode> record =
+                new ConsumerRecord<>("user-registered", 0, 15L, "user1@test.local", kafkaEventNode);
 
-        AtomicInteger acknowledgeCalls = new AtomicInteger(0);
+        emailRequestKafkaListener.listenUserRegistered(record, acknowledgment);
 
-        when(emailIngestionService.ingest(event)).thenReturn(false);
+        Collection<Invocation> acknowledgmentInvocations = mockingDetails(acknowledgment).getInvocations();
 
-        doAnswer(invocation -> {
-            acknowledgeCalls.incrementAndGet();
-            return null;
-        }).when(acknowledgment).acknowledge();
+        long acknowledgeCalls = acknowledgmentInvocations.stream()
+                .filter(invocation -> invocation.getMethod().getName().equals("acknowledge"))
+                .count();
 
-        emailRequestKafkaListener.listen(record, acknowledgment);
-
-        assertThat(acknowledgeCalls.get()).isEqualTo(1);
+        assertThat(acknowledgeCalls).isEqualTo(1);
     }
 
     @Test
-    @DisplayName("listen — не вызывает acknowledge, если ingest выбрасывает исключение")
-    void listen_ShouldNotAcknowledge_WhenIngestThrowsException() {
-        EmailRequestedEvent event = EmailRequestedEvent.builder()
-                .type(OutboxEmailType.WELCOME)
-                .payload(Map.of(
+    @DisplayName("listenUserRegistered — не вызывает acknowledge если ingest выбрасывает исключение")
+    void listenUserRegistered_ShouldNotAcknowledge_WhenProcessingFailed() throws Exception {
+        JsonNode kafkaEventNode = buildKafkaEventNode(
+                Map.of(
+                        "id", "1",
                         "email", "user1@test.local",
-                        "id", 1
-                ))
-                .build();
+                        "firstName", "John",
+                        "lastName", "Doe"
+                )
+        );
 
-        ConsumerRecord<String, EmailRequestedEvent> record =
-                new ConsumerRecord<>("user-registered", 0, 0L, "key-1", event);
+        ConsumerRecord<String, JsonNode> record =
+                new ConsumerRecord<>("user-registered", 0, 16L, "user1@test.local", kafkaEventNode);
 
-        when(emailIngestionService.ingest(event))
-                .thenThrow(new IllegalArgumentException("payload.email is blank"));
+        doThrow(new EmailEventValidationException("payload.id is blank"))
+                .when(emailIngestionService)
+                .ingestUserRegistered(any(JsonNode.class));
 
-        assertThatThrownBy(() -> emailRequestKafkaListener.listen(record, acknowledgment))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("payload.email is blank");
+        assertThatThrownBy(() -> emailRequestKafkaListener.listenUserRegistered(record, acknowledgment))
+                .isInstanceOf(EmailEventValidationException.class)
+                .hasMessage("payload.id is blank");
+
+        Collection<Invocation> acknowledgmentInvocations = mockingDetails(acknowledgment).getInvocations();
+
+        long acknowledgeCalls = acknowledgmentInvocations.stream()
+                .filter(invocation -> invocation.getMethod().getName().equals("acknowledge"))
+                .count();
+
+        assertThat(acknowledgeCalls).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("listenDailyReport — вызывает acknowledge при успешной обработке")
+    void listenDailyReport_ShouldAcknowledge_WhenProcessingSucceeded() throws Exception {
+        JsonNode kafkaEventNode = buildKafkaEventNode(
+                Map.of(
+                        "userId", "2",
+                        "email", "user2@test.local",
+                        "pendingCount", 3,
+                        "completedCount", 5
+                )
+        );
+
+        ConsumerRecord<String, JsonNode> record =
+                new ConsumerRecord<>("daily-report", 1, 20L, "2", kafkaEventNode);
+
+        emailRequestKafkaListener.listenDailyReport(record, acknowledgment);
+
+        Collection<Invocation> acknowledgmentInvocations = mockingDetails(acknowledgment).getInvocations();
+
+        long acknowledgeCalls = acknowledgmentInvocations.stream()
+                .filter(invocation -> invocation.getMethod().getName().equals("acknowledge"))
+                .count();
+
+        assertThat(acknowledgeCalls).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("listenDailyReport — не вызывает acknowledge если ingest выбрасывает исключение")
+    void listenDailyReport_ShouldNotAcknowledge_WhenProcessingFailed() throws Exception {
+        JsonNode kafkaEventNode = buildKafkaEventNode(
+                Map.of(
+                        "userId", "2",
+                        "email", "user2@test.local",
+                        "pendingCount", 3,
+                        "completedCount", 5
+                )
+        );
+
+        ConsumerRecord<String, JsonNode> record =
+                new ConsumerRecord<>("daily-report", 1, 21L, "2", kafkaEventNode);
+
+        doThrow(new EmailEventValidationException("payload.userId is blank"))
+                .when(emailIngestionService)
+                .ingestDailyReport(any(JsonNode.class));
+
+        assertThatThrownBy(() -> emailRequestKafkaListener.listenDailyReport(record, acknowledgment))
+                .isInstanceOf(EmailEventValidationException.class)
+                .hasMessage("payload.userId is blank");
+
+        Collection<Invocation> acknowledgmentInvocations = mockingDetails(acknowledgment).getInvocations();
+
+        long acknowledgeCalls = acknowledgmentInvocations.stream()
+                .filter(invocation -> invocation.getMethod().getName().equals("acknowledge"))
+                .count();
+
+        assertThat(acknowledgeCalls).isEqualTo(0);
+    }
+
+    private JsonNode buildKafkaEventNode(Map<String, Object> payload) {
+        return objectMapper.valueToTree(
+                Map.of("payload", payload)
+        );
     }
 }

@@ -1,5 +1,8 @@
 package org.mushroom.config;
 
+import lombok.RequiredArgsConstructor;
+import org.mushroom.exception.EmailEventDeserializationException;
+import org.mushroom.exception.EmailEventValidationException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.kafka.ConcurrentKafkaListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
@@ -11,20 +14,30 @@ import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.util.backoff.FixedBackOff;
 
 @Configuration
+@RequiredArgsConstructor
 public class KafkaConsumerConfig {
 
-    @Value("${email-ingestion.concurrency:1}")
+    @Value("${email-ingestion.concurrency}")
     private Integer concurrency;
 
-    @Value("${email-ingestion.retry-interval-ms:2000}")
+    @Value("${email-ingestion.retry-interval-ms}")
     private Long retryIntervalMs;
 
-    @Value("${email-ingestion.retry-max-attempts:3}")
+    @Value("${email-ingestion.retry-max-attempts}")
     private Long retryMaxAttempts;
 
     @Bean
     public DefaultErrorHandler kafkaErrorHandler() {
-        return new DefaultErrorHandler(new FixedBackOff(retryIntervalMs, retryMaxAttempts));
+        DefaultErrorHandler handler =
+                new DefaultErrorHandler(new FixedBackOff(retryIntervalMs, retryMaxAttempts));
+
+        handler.addNotRetryableExceptions(
+                EmailEventValidationException.class,
+                EmailEventDeserializationException.class,
+                IllegalArgumentException.class
+        );
+
+        return handler;
     }
 
     @Bean

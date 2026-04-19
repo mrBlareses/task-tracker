@@ -60,31 +60,39 @@ services:
     networks:
       - task-tracker-net
 
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    restart: unless-stopped
+    networks:
+      - task-tracker-net
+
   backend-service:
     build:
       context: .
       dockerfile: backend-service/Dockerfile
     depends_on:
-        postgres:
-          condition: service_healthy
-        kafka:
-          condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     ports:
       - "8081:8081"
     env_file:
-    - ./.env
+      - ./.env
     environment:
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-
       SERVER_PORT: ${SERVER_PORT}
     restart: unless-stopped
     networks:
       - task-tracker-net
+
   cron-service:
     build:
       context: .
@@ -103,18 +111,15 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/task_tracker_db
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-
       AUTH_BASE_URL: http://backend-service:8081
       AUTH_LOGIN_ENDPOINT: /api/v1/auth/login
       AUTH_EMAIL: service@local
       AUTH_PASSWORD: service123
-
       CRON_DAILY_ANALYTICS_EXPRESSION: "0 */1 * * * *"
       CRON_DAILY_ANALYTICS_ZONE: UTC
       CRON_DAILY_ANALYTICS_BACKEND_BASE_URL: http://backend-service:8081
       CRON_DAILY_ANALYTICS_TRIGGER_PATH: /api/v1/service/daily-analytics/run
       CRON_DAILY_ANALYTICS_STALE_THRESHOLD: PT15M
-
       RETRY_DAILY_ANALYTICS_MAX_ATTEMPTS: 3
       RETRY_DAILY_ANALYTICS_FIRST_BACKOFF: 1s
       RETRY_DAILY_ANALYTICS_SECOND_BACKOFF: 2s
@@ -132,6 +137,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      mailhog:
+        condition: service_started
     ports:
       - "8083:8083"
     env_file:
@@ -143,8 +150,14 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_KAFKA_CONSUMER_GROUP_ID: email-sender-service
-      EMAIL_INGESTION_TOPIC: user-registered
+
+      EMAIL_INGESTION_TOPIC_USER_REGISTERED: user-registered
+      EMAIL_INGESTION_TOPIC_DAILY_REPORT: daily-report
       EMAIL_INGESTION_CONCURRENCY: 1
+
+      SPRING_MAIL_HOST: mailhog
+      SPRING_MAIL_PORT: 1025
+      APP_MAIL_FROM: no-reply@task-tracker.local
     restart: unless-stopped
     networks:
       - task-tracker-net
