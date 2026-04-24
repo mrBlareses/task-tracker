@@ -1,6 +1,5 @@
 package org.mushroom.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -9,6 +8,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.invocation.Invocation;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mushroom.contract.avro.UserDailyReportEventAvro;
+import org.mushroom.contract.avro.UserRegisteredEventAvro;
 import org.mushroom.exception.EmailEventValidationException;
 import org.mushroom.exception.UserDailyReportEventValidator;
 import org.mushroom.exception.UserRegisteredEventValidator;
@@ -16,7 +17,6 @@ import org.mushroom.repository.OutboxEmailRepository;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -53,16 +53,14 @@ class EmailIngestionServiceUnitTest {
     @Test
     @DisplayName("ingestUserRegistered — вставляет новую запись WELCOME через ON CONFLICT DO NOTHING")
     void ingestUserRegistered_ShouldInsertWelcomeOutboxEmail_WhenEventIsValid() throws Exception {
-        JsonNode kafkaEventNode = buildKafkaEventNode(
-                Map.of(
-                        "id", "1",
-                        "email", "user1@test.local",
-                        "firstName", "John",
-                        "lastName", "Doe"
-                )
-        );
+        UserRegisteredEventAvro event = UserRegisteredEventAvro.newBuilder()
+                .setId("1")
+                .setEmail("user1@test.local")
+                .setFirstName("John")
+                .setLastName("Doe")
+                .build();
 
-        when(userRegisteredEventValidator.validateAndBuildDedupKey(any()))
+        when(userRegisteredEventValidator.validateAndBuildDedupKey(any(UserRegisteredEventAvro.class)))
                 .thenReturn("user1@test.local:1");
 
         when(outboxEmailRepository.insertIgnoreConflict(
@@ -76,7 +74,7 @@ class EmailIngestionServiceUnitTest {
                 any()
         )).thenReturn(1);
 
-        emailIngestionService.ingestUserRegistered(kafkaEventNode);
+        emailIngestionService.ingestUserRegistered(event);
 
         Collection<Invocation> invocations = mockingDetails(outboxEmailRepository).getInvocations();
 
@@ -109,16 +107,14 @@ class EmailIngestionServiceUnitTest {
     @Test
     @DisplayName("ingestDailyReport — вставляет новую запись REPORT через ON CONFLICT DO NOTHING")
     void ingestDailyReport_ShouldInsertReportOutboxEmail_WhenEventIsValid() throws Exception {
-        JsonNode kafkaEventNode = buildKafkaEventNode(
-                Map.of(
-                        "userId", "2",
-                        "email", "user2@test.local",
-                        "pendingCount", 3,
-                        "completedCount", 5
-                )
-        );
+        UserDailyReportEventAvro event = UserDailyReportEventAvro.newBuilder()
+                .setUserId("2")
+                .setEmail("user2@test.local")
+                .setPendingCount(3)
+                .setCompletedCount(5)
+                .build();
 
-        when(userDailyReportEventValidator.validateAndBuildDedupKey(any()))
+        when(userDailyReportEventValidator.validateAndBuildDedupKey(any(UserDailyReportEventAvro.class)))
                 .thenReturn("user2@test.local:2");
 
         when(outboxEmailRepository.insertIgnoreConflict(
@@ -132,7 +128,7 @@ class EmailIngestionServiceUnitTest {
                 any()
         )).thenReturn(1);
 
-        emailIngestionService.ingestDailyReport(kafkaEventNode);
+        emailIngestionService.ingestDailyReport(event);
 
         Collection<Invocation> invocations = mockingDetails(outboxEmailRepository).getInvocations();
 
@@ -165,16 +161,14 @@ class EmailIngestionServiceUnitTest {
     @Test
     @DisplayName("ingestUserRegistered — duplicate не ломает обработку и не кидает исключение")
     void ingestUserRegistered_ShouldNotThrow_WhenDuplicateDetected() throws Exception {
-        JsonNode kafkaEventNode = buildKafkaEventNode(
-                Map.of(
-                        "id", "1",
-                        "email", "user1@test.local",
-                        "firstName", "John",
-                        "lastName", "Doe"
-                )
-        );
+        UserRegisteredEventAvro event = UserRegisteredEventAvro.newBuilder()
+                .setId("1")
+                .setEmail("user1@test.local")
+                .setFirstName("John")
+                .setLastName("Doe")
+                .build();
 
-        when(userRegisteredEventValidator.validateAndBuildDedupKey(any()))
+        when(userRegisteredEventValidator.validateAndBuildDedupKey(any(UserRegisteredEventAvro.class)))
                 .thenReturn("user1@test.local:1");
 
         when(outboxEmailRepository.insertIgnoreConflict(
@@ -188,7 +182,7 @@ class EmailIngestionServiceUnitTest {
                 any()
         )).thenReturn(0);
 
-        emailIngestionService.ingestUserRegistered(kafkaEventNode);
+        emailIngestionService.ingestUserRegistered(event);
 
         Collection<Invocation> invocations = mockingDetails(outboxEmailRepository).getInvocations();
 
@@ -202,17 +196,17 @@ class EmailIngestionServiceUnitTest {
     @Test
     @DisplayName("ingestUserRegistered — пробрасывает EmailEventValidationException если событие невалидно")
     void ingestUserRegistered_ShouldThrow_WhenValidatorFails() throws Exception {
-        JsonNode kafkaEventNode = buildKafkaEventNode(
-                Map.of(
-                        "id", "1",
-                        "email", "user1@test.local"
-                )
-        );
+        UserRegisteredEventAvro event = UserRegisteredEventAvro.newBuilder()
+                .setId("1")
+                .setEmail("user1@test.local")
+                .setFirstName("John")
+                .setLastName("Doe")
+                .build();
 
-        when(userRegisteredEventValidator.validateAndBuildDedupKey(any()))
+        when(userRegisteredEventValidator.validateAndBuildDedupKey(any(UserRegisteredEventAvro.class)))
                 .thenThrow(new EmailEventValidationException("payload.id is blank"));
 
-        assertThatThrownBy(() -> emailIngestionService.ingestUserRegistered(kafkaEventNode))
+        assertThatThrownBy(() -> emailIngestionService.ingestUserRegistered(event))
                 .isInstanceOf(EmailEventValidationException.class)
                 .hasMessage("payload.id is blank");
     }
@@ -220,24 +214,18 @@ class EmailIngestionServiceUnitTest {
     @Test
     @DisplayName("ingestDailyReport — пробрасывает EmailEventValidationException если событие невалидно")
     void ingestDailyReport_ShouldThrow_WhenValidatorFails() throws Exception {
-        JsonNode kafkaEventNode = buildKafkaEventNode(
-                Map.of(
-                        "userId", "2",
-                        "email", "user2@test.local"
-                )
-        );
+        UserDailyReportEventAvro event = UserDailyReportEventAvro.newBuilder()
+                .setUserId("2")
+                .setEmail("user2@test.local")
+                .setPendingCount(3)
+                .setCompletedCount(5)
+                .build();
 
-        when(userDailyReportEventValidator.validateAndBuildDedupKey(any()))
+        when(userDailyReportEventValidator.validateAndBuildDedupKey(any(UserDailyReportEventAvro.class)))
                 .thenThrow(new EmailEventValidationException("payload.userId is blank"));
 
-        assertThatThrownBy(() -> emailIngestionService.ingestDailyReport(kafkaEventNode))
+        assertThatThrownBy(() -> emailIngestionService.ingestDailyReport(event))
                 .isInstanceOf(EmailEventValidationException.class)
                 .hasMessage("payload.userId is blank");
-    }
-
-    private JsonNode buildKafkaEventNode(Map<String, Object> payload) {
-        return objectMapper.valueToTree(
-                Map.of("payload", payload)
-        );
     }
 }

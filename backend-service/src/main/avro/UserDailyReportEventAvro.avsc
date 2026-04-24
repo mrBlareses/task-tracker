@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "namespace": "org.mushroom.contract.avro",
+  "name": "UserDailyReportEventAvro",
+  "fields": [
+    { "name": "userId", "type": "string" },
+    { "name": "email", "type": "string" },
+    { "name": "pendingCount", "type": "int" },
+    { "name": "completedCount", "type": "int" }
+  ]
+}

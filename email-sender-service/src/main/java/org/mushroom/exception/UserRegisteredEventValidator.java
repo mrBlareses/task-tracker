@@ -1,24 +1,24 @@
 package org.mushroom.exception;
 
-import org.mushroom.model.UserRegisteredEvent;
+import org.mushroom.contract.avro.UserRegisteredEventAvro;
 import org.springframework.stereotype.Component;
 
 @Component
 public class UserRegisteredEventValidator {
 
-    public String validateAndBuildDedupKey(UserRegisteredEvent event) throws EmailEventValidationException {
+    public String validateAndBuildDedupKey(UserRegisteredEventAvro event) throws EmailEventValidationException {
         if (event == null) {
             throw new EmailEventValidationException("event is null");
         }
 
-        if (event.email() == null || event.email().isBlank()) {
+        if (event.getEmail() == null || event.getEmail().isBlank()) {
             throw new EmailEventValidationException("payload.email is blank");
         }
 
-        if (event.id() == null || event.id().isBlank()) {
+        if (event.getId() == null || event.getId().isBlank()) {
             throw new EmailEventValidationException("payload.id is blank");
         }
 
-        return event.email() + ":" + event.id();
+        return event.getEmail() + ":" + event.getId();
     }
 }

@@ -1,18 +1,18 @@
 package org.mushroom.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.mushroom.contract.avro.UserDailyReportEventAvro;
+import org.mushroom.contract.avro.UserRegisteredEventAvro;
 import org.mushroom.entity.enums.OutboxEmailStatus;
 import org.mushroom.entity.enums.OutboxEmailType;
 import org.mushroom.exception.EmailEventDeserializationException;
 import org.mushroom.exception.EmailEventValidationException;
 import org.mushroom.exception.UserDailyReportEventValidator;
 import org.mushroom.exception.UserRegisteredEventValidator;
-import org.mushroom.model.UserDailyReportEvent;
-import org.mushroom.model.UserRegisteredEvent;
 import org.mushroom.repository.OutboxEmailRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,28 +30,36 @@ public class EmailIngestionService {
     private final ObjectMapper objectMapper;
 
     @Transactional
-    public void ingestUserRegistered(JsonNode kafkaEventNode)
+    public void ingestUserRegistered(UserRegisteredEventAvro event)
             throws EmailEventValidationException, EmailEventDeserializationException {
 
-        JsonNode payloadNode = extractPayloadNode(kafkaEventNode);
-        UserRegisteredEvent event = toUserRegisteredEvent(payloadNode);
         String dedupKey = userRegisteredEventValidator.validateAndBuildDedupKey(event);
+
+        ObjectNode payloadNode = objectMapper.createObjectNode();
+        payloadNode.put("id", event.getId());
+        payloadNode.put("email", event.getEmail());
+        payloadNode.put("firstName", event.getFirstName());
+        payloadNode.put("lastName", event.getLastName());
 
         saveOutboxEmail(payloadNode, dedupKey, OutboxEmailType.WELCOME);
     }
 
     @Transactional
-    public void ingestDailyReport(JsonNode kafkaEventNode)
+    public void ingestDailyReport(UserDailyReportEventAvro event)
             throws EmailEventValidationException, EmailEventDeserializationException {
 
-        JsonNode payloadNode = extractPayloadNode(kafkaEventNode);
-        UserDailyReportEvent event = toUserDailyReportEvent(payloadNode);
         String dedupKey = userDailyReportEventValidator.validateAndBuildDedupKey(event);
+
+        ObjectNode payloadNode = objectMapper.createObjectNode();
+        payloadNode.put("userId", event.getUserId());
+        payloadNode.put("email", event.getEmail());
+        payloadNode.put("pendingCount", event.getPendingCount());
+        payloadNode.put("completedCount", event.getCompletedCount());
 
         saveOutboxEmail(payloadNode, dedupKey, OutboxEmailType.REPORT);
     }
 
-    protected void saveOutboxEmail(JsonNode payloadNode, String dedupKey, OutboxEmailType type)
+    protected void saveOutboxEmail(ObjectNode payloadNode, String dedupKey, OutboxEmailType type)
             throws EmailEventDeserializationException {
 
         LocalDateTime now = LocalDateTime.now();
@@ -74,44 +82,7 @@ public class EmailIngestionService {
         }
     }
 
-    private JsonNode extractPayloadNode(JsonNode kafkaEventNode) throws EmailEventValidationException {
-        if (kafkaEventNode == null || kafkaEventNode.isNull()) {
-            throw new EmailEventValidationException("event is null");
-        }
-
-        JsonNode payloadNode = kafkaEventNode.get("payload");
-        if (payloadNode == null || payloadNode.isNull() || payloadNode.isMissingNode()) {
-            throw new EmailEventValidationException("payload is empty");
-        }
-
-        return payloadNode;
-    }
-
-    private UserRegisteredEvent toUserRegisteredEvent(JsonNode payloadNode)
-            throws EmailEventDeserializationException {
-        try {
-            return objectMapper.treeToValue(payloadNode, UserRegisteredEvent.class);
-        } catch (JsonProcessingException ex) {
-            throw new EmailEventDeserializationException(
-                    "Failed to deserialize user-registered payload",
-                    ex
-            );
-        }
-    }
-
-    private UserDailyReportEvent toUserDailyReportEvent(JsonNode payloadNode)
-            throws EmailEventDeserializationException {
-        try {
-            return objectMapper.treeToValue(payloadNode, UserDailyReportEvent.class);
-        } catch (JsonProcessingException ex) {
-            throw new EmailEventDeserializationException(
-                    "Failed to deserialize daily-report payload",
-                    ex
-            );
-        }
-    }
-
-    private String toJson(JsonNode payloadNode) throws EmailEventDeserializationException {
+    private String toJson(ObjectNode payloadNode) throws EmailEventDeserializationException {
         try {
             return objectMapper.writeValueAsString(payloadNode);
         } catch (JsonProcessingException ex) {

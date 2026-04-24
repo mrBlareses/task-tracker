@@ -1,9 +1,10 @@
 package org.mushroom.consumer;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.mushroom.contract.avro.UserDailyReportEventAvro;
+import org.mushroom.contract.avro.UserRegisteredEventAvro;
 import org.mushroom.exception.EmailEventDeserializationException;
 import org.mushroom.exception.EmailEventValidationException;
 import org.mushroom.service.EmailIngestionService;
@@ -23,7 +24,7 @@ public class EmailRequestKafkaListener {
             containerFactory = "emailKafkaListenerContainerFactory"
     )
     public void listenUserRegistered(
-            ConsumerRecord<String, JsonNode> record,
+            ConsumerRecord<String, UserRegisteredEventAvro> record,
             Acknowledgment acknowledgment
     ) throws EmailEventValidationException, EmailEventDeserializationException {
 
@@ -40,7 +41,7 @@ public class EmailRequestKafkaListener {
             containerFactory = "emailKafkaListenerContainerFactory"
     )
     public void listenDailyReport(
-            ConsumerRecord<String, JsonNode> record,
+            ConsumerRecord<String, UserDailyReportEventAvro> record,
             Acknowledgment acknowledgment
     ) throws EmailEventValidationException, EmailEventDeserializationException {
 

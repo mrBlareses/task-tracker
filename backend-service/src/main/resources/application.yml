@@ -26,10 +26,12 @@ spring:
       acks: ${SPRING_KAFKA_PRODUCER_ACKS:all}
       retries: ${SPRING_KAFKA_PRODUCER_RETRIES:5}
       key-serializer: ${SPRING_KAFKA_PRODUCER_KEY_SERIALIZER:org.apache.kafka.common.serialization.StringSerializer}
-      value-serializer: ${SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER:org.springframework.kafka.support.serializer.JsonSerializer}
+      value-serializer: ${SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER:io.confluent.kafka.serializers.KafkaAvroSerializer}
       properties:
+        schema.registry.url: ${SPRING_KAFKA_SCHEMA_REGISTRY_URL:http://schema-registry:8081}
         enable.idempotence: ${SPRING_KAFKA_PRODUCER_ENABLE_IDEMPOTENCE:true}
         max.in.flight.requests.per.connection: ${SPRING_KAFKA_PRODUCER_MAX_IN_FLIGHT:5}
+        auto.register.schemas: true
 
 jwt:
   secret: ${JWT_SECRET}
