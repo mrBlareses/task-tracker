@@ -21,6 +21,7 @@ import java.util.Collection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.when;
 
@@ -36,6 +37,12 @@ class EmailIngestionServiceUnitTest {
     @Mock
     private UserDailyReportEventValidator userDailyReportEventValidator;
 
+    @Mock
+    private UserRegisteredDedupKeyBuilder userRegisteredDedupKeyBuilder;
+
+    @Mock
+    private UserDailyReportDedupKeyBuilder userDailyReportDedupKeyBuilder;
+
     private ObjectMapper objectMapper;
     private EmailIngestionService emailIngestionService;
 
@@ -46,6 +53,8 @@ class EmailIngestionServiceUnitTest {
                 outboxEmailRepository,
                 userRegisteredEventValidator,
                 userDailyReportEventValidator,
+                userRegisteredDedupKeyBuilder,
+                userDailyReportDedupKeyBuilder,
                 objectMapper
         );
     }
@@ -60,7 +69,7 @@ class EmailIngestionServiceUnitTest {
                 .setLastName("Doe")
                 .build();
 
-        when(userRegisteredEventValidator.validateAndBuildDedupKey(any(UserRegisteredEventAvro.class)))
+        when(userRegisteredDedupKeyBuilder.build(any(UserRegisteredEventAvro.class)))
                 .thenReturn("user1@test.local:1");
 
         when(outboxEmailRepository.insertIgnoreConflict(
@@ -114,7 +123,7 @@ class EmailIngestionServiceUnitTest {
                 .setCompletedCount(5)
                 .build();
 
-        when(userDailyReportEventValidator.validateAndBuildDedupKey(any(UserDailyReportEventAvro.class)))
+        when(userDailyReportDedupKeyBuilder.build(any(UserDailyReportEventAvro.class)))
                 .thenReturn("user2@test.local:2");
 
         when(outboxEmailRepository.insertIgnoreConflict(
@@ -168,7 +177,7 @@ class EmailIngestionServiceUnitTest {
                 .setLastName("Doe")
                 .build();
 
-        when(userRegisteredEventValidator.validateAndBuildDedupKey(any(UserRegisteredEventAvro.class)))
+        when(userRegisteredDedupKeyBuilder.build(any(UserRegisteredEventAvro.class)))
                 .thenReturn("user1@test.local:1");
 
         when(outboxEmailRepository.insertIgnoreConflict(
@@ -203,8 +212,9 @@ class EmailIngestionServiceUnitTest {
                 .setLastName("Doe")
                 .build();
 
-        when(userRegisteredEventValidator.validateAndBuildDedupKey(any(UserRegisteredEventAvro.class)))
-                .thenThrow(new EmailEventValidationException("payload.id is blank"));
+        doThrow(new EmailEventValidationException("payload.id is blank"))
+                .when(userRegisteredEventValidator)
+                .validate(any(UserRegisteredEventAvro.class));
 
         assertThatThrownBy(() -> emailIngestionService.ingestUserRegistered(event))
                 .isInstanceOf(EmailEventValidationException.class)
@@ -221,8 +231,9 @@ class EmailIngestionServiceUnitTest {
                 .setCompletedCount(5)
                 .build();
 
-        when(userDailyReportEventValidator.validateAndBuildDedupKey(any(UserDailyReportEventAvro.class)))
-                .thenThrow(new EmailEventValidationException("payload.userId is blank"));
+        doThrow(new EmailEventValidationException("payload.userId is blank"))
+                .when(userDailyReportEventValidator)
+                .validate(any(UserDailyReportEventAvro.class));
 
         assertThatThrownBy(() -> emailIngestionService.ingestDailyReport(event))
                 .isInstanceOf(EmailEventValidationException.class)

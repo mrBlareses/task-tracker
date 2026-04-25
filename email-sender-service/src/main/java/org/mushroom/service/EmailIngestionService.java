@@ -27,13 +27,16 @@ public class EmailIngestionService {
     private final OutboxEmailRepository outboxEmailRepository;
     private final UserRegisteredEventValidator userRegisteredEventValidator;
     private final UserDailyReportEventValidator userDailyReportEventValidator;
+    private final UserRegisteredDedupKeyBuilder userRegisteredDedupKeyBuilder;
+    private final UserDailyReportDedupKeyBuilder userDailyReportDedupKeyBuilder;
     private final ObjectMapper objectMapper;
 
     @Transactional
     public void ingestUserRegistered(UserRegisteredEventAvro event)
             throws EmailEventValidationException, EmailEventDeserializationException {
 
-        String dedupKey = userRegisteredEventValidator.validateAndBuildDedupKey(event);
+        userRegisteredEventValidator.validate(event);
+        String dedupKey = userRegisteredDedupKeyBuilder.build(event);
 
         ObjectNode payloadNode = objectMapper.createObjectNode();
         payloadNode.put("id", event.getId());
@@ -48,7 +51,8 @@ public class EmailIngestionService {
     public void ingestDailyReport(UserDailyReportEventAvro event)
             throws EmailEventValidationException, EmailEventDeserializationException {
 
-        String dedupKey = userDailyReportEventValidator.validateAndBuildDedupKey(event);
+        userDailyReportEventValidator.validate(event);
+        String dedupKey = userDailyReportDedupKeyBuilder.build(event);
 
         ObjectNode payloadNode = objectMapper.createObjectNode();
         payloadNode.put("userId", event.getUserId());
@@ -77,8 +81,12 @@ public class EmailIngestionService {
         );
 
         if (insertedRows == 1) {
-            log.info("Outbox email saved successfully: dedupKey={}, type={}, status={}",
-                    dedupKey, type, OutboxEmailStatus.NEW);
+            log.info(
+                    "Outbox email saved successfully: dedupKey={}, type={}, status={}",
+                    dedupKey,
+                    type,
+                    OutboxEmailStatus.NEW
+            );
         }
     }
 

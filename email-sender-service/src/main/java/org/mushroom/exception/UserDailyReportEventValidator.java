@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class UserDailyReportEventValidator {
 
-    public String validateAndBuildDedupKey(UserDailyReportEventAvro event) throws EmailEventValidationException {
+    public void validate(UserDailyReportEventAvro event) throws EmailEventValidationException {
         if (event == null) {
             throw new EmailEventValidationException("event is null");
         }
@@ -19,6 +19,12 @@ public class UserDailyReportEventValidator {
             throw new EmailEventValidationException("payload.userId is blank");
         }
 
-        return event.getEmail() + ":" + event.getUserId();
+        if (event.getPendingCount() < 0) {
+            throw new EmailEventValidationException("payload.pendingCount is negative");
+        }
+
+        if (event.getCompletedCount() < 0) {
+            throw new EmailEventValidationException("payload.completedCount is negative");
+        }
     }
 }

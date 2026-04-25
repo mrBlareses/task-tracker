@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class UserRegisteredEventValidator {
 
-    public String validateAndBuildDedupKey(UserRegisteredEventAvro event) throws EmailEventValidationException {
+    public void validate(UserRegisteredEventAvro event) throws EmailEventValidationException {
         if (event == null) {
             throw new EmailEventValidationException("event is null");
         }
@@ -19,6 +19,12 @@ public class UserRegisteredEventValidator {
             throw new EmailEventValidationException("payload.id is blank");
         }
 
-        return event.getEmail() + ":" + event.getId();
+        if (event.getFirstName() == null || event.getFirstName().isBlank()) {
+            throw new EmailEventValidationException("payload.firstName is blank");
+        }
+
+        if (event.getLastName() == null || event.getLastName().isBlank()) {
+            throw new EmailEventValidationException("payload.lastName is blank");
+        }
     }
 }

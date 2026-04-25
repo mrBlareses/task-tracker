@@ -1,7 +1,6 @@
 package org.mushroom.service;
 
 import org.mushroom.exception.EmailEventValidationException;
-import org.mushroom.model.EmailRequestedEvent;
 import org.springframework.stereotype.Component;
 
 @Component
