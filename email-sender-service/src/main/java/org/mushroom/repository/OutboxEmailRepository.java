@@ -73,4 +73,12 @@ public interface OutboxEmailRepository extends JpaRepository<OutboxEmail, Long> 
             @Param("ids") List<Long> ids,
             @Param("status") OutboxEmailStatus status
     );
+
+    @Query("""
+            SELECT e
+            FROM OutboxEmail e
+            WHERE e.id IN :ids
+            ORDER BY e.nextAttemptAt, e.id
+            """)
+    List<OutboxEmail> findClaimedBatchByIds(@Param("ids") List<Long> ids);
 }

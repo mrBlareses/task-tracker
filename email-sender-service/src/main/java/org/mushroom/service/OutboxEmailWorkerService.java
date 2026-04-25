@@ -2,6 +2,7 @@ package org.mushroom.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.mushroom.entity.OutboxEmail;
 import org.mushroom.exception.OutboxClaimException;
 import org.mushroom.exception.OutboxEmailProcessingException;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -23,18 +24,18 @@ public class OutboxEmailWorkerService {
     private final ThreadPoolTaskExecutor emailProcessingExecutor;
 
     public void processBatch() throws OutboxClaimException {
-        List<Long> ids = outboxEmailClaimService.claimNextBatch();
+        List<OutboxEmail> emails = outboxEmailClaimService.claimNextBatch();
 
-        if (ids.isEmpty()) {
+        if (emails.isEmpty()) {
             return;
         }
 
-        List<CompletableFuture<Void>> futures = ids.stream()
-                .map(id -> CompletableFuture.runAsync(() -> {
+        List<CompletableFuture<Void>> futures = emails.stream()
+                .map(email -> CompletableFuture.runAsync(() -> {
                     try {
-                        singleOutboxEmailProcessor.processOne(id);
+                        singleOutboxEmailProcessor.processOne(email);
                     } catch (OutboxEmailProcessingException ex) {
-                        log.error("Failed to process outbox email id={}", id, ex);
+                        log.error("Failed to process outbox email id={}", email.getId(), ex);
                     }
                 }, emailProcessingExecutor))
                 .toList();

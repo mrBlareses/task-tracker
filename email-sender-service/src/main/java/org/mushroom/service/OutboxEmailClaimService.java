@@ -1,6 +1,7 @@
 package org.mushroom.service;
 
 import lombok.RequiredArgsConstructor;
+import org.mushroom.entity.OutboxEmail;
 import org.mushroom.entity.enums.OutboxEmailStatus;
 import org.mushroom.exception.OutboxClaimException;
 import org.mushroom.repository.OutboxEmailRepository;
@@ -23,7 +24,7 @@ public class OutboxEmailClaimService {
     private int maxAttempts;
 
     @Transactional
-    public List<Long> claimNextBatch() throws OutboxClaimException {
+    public List<OutboxEmail> claimNextBatch() throws OutboxClaimException {
         try {
             List<Long> ids = outboxEmailRepository.lockNextBatchIds(batchSize, maxAttempts);
 
@@ -33,7 +34,7 @@ public class OutboxEmailClaimService {
 
             outboxEmailRepository.updateStatusByIds(ids, OutboxEmailStatus.PROCESSING);
 
-            return ids;
+            return outboxEmailRepository.findClaimedBatchByIds(ids);
         } catch (Exception ex) {
             throw new OutboxClaimException("Failed to claim outbox batch", ex);
         }

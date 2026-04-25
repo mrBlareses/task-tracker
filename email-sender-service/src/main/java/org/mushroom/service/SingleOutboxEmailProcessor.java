@@ -8,7 +8,6 @@ import org.mushroom.exception.OutboxEmailProcessingException;
 import org.mushroom.repository.OutboxEmailRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -23,11 +22,8 @@ public class SingleOutboxEmailProcessor {
     @Value("${email-processing.retry-delay-minutes:5}")
     private long retryDelayMinutes;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void processOne(Long emailId) throws OutboxEmailProcessingException {
-        OutboxEmail email = outboxEmailRepository.findById(emailId)
-                .orElseThrow(() -> new OutboxEmailProcessingException("Outbox email not found: " + emailId));
-
+    @Transactional
+    public void processOne(OutboxEmail email) throws OutboxEmailProcessingException {
         LocalDateTime now = LocalDateTime.now();
 
         try {
@@ -45,7 +41,10 @@ public class SingleOutboxEmailProcessor {
 
             outboxEmailRepository.save(email);
         } catch (Exception ex) {
-            throw new OutboxEmailProcessingException("Failed to process outbox email id=" + emailId, ex);
+            throw new OutboxEmailProcessingException(
+                    "Failed to process outbox email id=" + email.getId(),
+                    ex
+            );
         }
     }
 }

@@ -5,21 +5,20 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.invocation.Invocation;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mushroom.entity.OutboxEmail;
 import org.mushroom.entity.enums.OutboxEmailStatus;
+import org.mushroom.entity.enums.OutboxEmailType;
 import org.mushroom.exception.OutboxClaimException;
 import org.mushroom.repository.OutboxEmailRepository;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.Collection;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mockingDetails;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class OutboxEmailClaimServiceUnitTest {
@@ -37,65 +36,61 @@ class OutboxEmailClaimServiceUnitTest {
     }
 
     @Test
-    @DisplayName("claimNextBatch — возвращает список id и переводит их в PROCESSING")
-    void claimNextBatch_ShouldReturnIdsAndUpdateStatus_WhenBatchExists() throws Exception {
-        when(outboxEmailRepository.lockNextBatchIds(3, 5))
-                .thenReturn(List.of(10L, 11L, 12L));
+    @DisplayName("claimNextBatch — возвращает записи и переводит их в PROCESSING")
+    void claimNextBatch_ShouldReturnEmailsAndUpdateStatus_WhenBatchExists() throws Exception {
+        List<Long> ids = List.of(10L, 11L, 12L);
+        List<OutboxEmail> emails = List.of(
+                buildEmail(10L),
+                buildEmail(11L),
+                buildEmail(12L)
+        );
 
-        List<Long> actual = outboxEmailClaimService.claimNextBatch();
+        when(outboxEmailRepository.lockNextBatchIds(3, 5)).thenReturn(ids);
+        when(outboxEmailRepository.findClaimedBatchByIds(ids)).thenReturn(emails);
 
-        assertThat(actual).containsExactly(10L, 11L, 12L);
+        List<OutboxEmail> actual = outboxEmailClaimService.claimNextBatch();
 
-        Collection<Invocation> invocations = mockingDetails(outboxEmailRepository).getInvocations();
+        assertThat(actual).containsExactlyElementsOf(emails);
 
-        boolean hasUpdateCall = invocations.stream()
-                .anyMatch(invocation ->
-                        invocation.getMethod().getName().equals("updateStatusByIds")
-                                && invocation.getArgument(1) == OutboxEmailStatus.PROCESSING
-                );
-
-        assertThat(hasUpdateCall).isTrue();
+        verify(outboxEmailRepository).updateStatusByIds(ids, OutboxEmailStatus.PROCESSING);
+        verify(outboxEmailRepository).findClaimedBatchByIds(ids);
     }
 
     @Test
     @DisplayName("claimNextBatch — возвращает пустой список если batch пустой")
     void claimNextBatch_ShouldReturnEmptyList_WhenNoIdsFound() throws Exception {
-        when(outboxEmailRepository.lockNextBatchIds(3, 5))
-                .thenReturn(List.of());
+        when(outboxEmailRepository.lockNextBatchIds(3, 5)).thenReturn(List.of());
 
-        List<Long> actual = outboxEmailClaimService.claimNextBatch();
+        List<OutboxEmail> actual = outboxEmailClaimService.claimNextBatch();
 
         assertThat(actual).isEmpty();
 
-        Collection<Invocation> invocations = mockingDetails(outboxEmailRepository).getInvocations();
-
-        long updateCalls = invocations.stream()
-                .filter(invocation -> invocation.getMethod().getName().equals("updateStatusByIds"))
-                .count();
-
-        assertThat(updateCalls).isZero();
-    }
-
-    @Test
-    @DisplayName("claimNextBatch — не выбирает записи с исчерпанным лимитом попыток")
-    void claimNextBatch_ShouldUseConfiguredMaxAttempts() throws Exception {
-        when(outboxEmailRepository.lockNextBatchIds(3, 5))
-                .thenReturn(List.of(20L));
-
-        List<Long> actual = outboxEmailClaimService.claimNextBatch();
-
-        assertThat(actual).containsExactly(20L);
+        verify(outboxEmailRepository).lockNextBatchIds(3, 5);
+        verify(outboxEmailRepository, never()).updateStatusByIds(any(), any());
+        verify(outboxEmailRepository, never()).findClaimedBatchByIds(any());
     }
 
     @Test
     @DisplayName("claimNextBatch — выбрасывает OutboxClaimException если claim не удался")
     void claimNextBatch_ShouldThrow_WhenClaimFails() {
-        doThrow(new RuntimeException("db down"))
-                .when(outboxEmailRepository)
-                .lockNextBatchIds(3, 5);
+        when(outboxEmailRepository.lockNextBatchIds(3, 5))
+                .thenThrow(new RuntimeException("db down"));
 
         assertThatThrownBy(() -> outboxEmailClaimService.claimNextBatch())
                 .isInstanceOf(OutboxClaimException.class)
                 .hasMessage("Failed to claim outbox batch");
+    }
+
+    private OutboxEmail buildEmail(Long id) {
+        return OutboxEmail.builder()
+                .id(id)
+                .type(OutboxEmailType.WELCOME)
+                .status(OutboxEmailStatus.PROCESSING)
+                .dedupKey("user" + id + "@test.local:" + id)
+                .attempts(0)
+                .nextAttemptAt(LocalDateTime.now().minusMinutes(1))
+                .createdAt(LocalDateTime.now().minusMinutes(2))
+                .updatedAt(LocalDateTime.now().minusMinutes(2))
+                .build();
     }
 }
