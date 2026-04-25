@@ -1,23 +1,27 @@
 package org.mushroom.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.core.task.support.TaskExecutorAdapter;
+import org.springframework.scheduling.annotation.EnableAsync;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Configuration
+@EnableAsync
 public class EmailProcessingConfig {
 
+    @Bean(destroyMethod = "close")
+    public ExecutorService emailProcessingVirtualThreadExecutorService() {
+        return Executors.newVirtualThreadPerTaskExecutor();
+    }
+
     @Bean(name = "emailProcessingExecutor")
-    public ThreadPoolTaskExecutor emailProcessingExecutor(
-            @Value("${email-processing.worker-threads:4}") int workerThreads
+    public AsyncTaskExecutor emailProcessingExecutor(
+            ExecutorService emailProcessingVirtualThreadExecutorService
     ) {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(workerThreads);
-        executor.setMaxPoolSize(workerThreads);
-        executor.setQueueCapacity(100);
-        executor.setThreadNamePrefix("email-processing-");
-        executor.initialize();
-        return executor;
+        return new TaskExecutorAdapter(emailProcessingVirtualThreadExecutorService);
     }
 }
