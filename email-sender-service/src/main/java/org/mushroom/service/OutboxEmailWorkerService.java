@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.mushroom.exception.OutboxClaimException;
 import org.mushroom.exception.OutboxEmailProcessingException;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
@@ -23,14 +22,8 @@ public class OutboxEmailWorkerService {
     @Qualifier("emailProcessingExecutor")
     private final ThreadPoolTaskExecutor emailProcessingExecutor;
 
-    @Value("${email-processing.batch-size:50}")
-    private int batchSize;
-
-    @Value("${email-processing.retry-delay-minutes:5}")
-    private long retryDelayMinutes;
-
     public void processBatch() throws OutboxClaimException {
-        List<Long> ids = outboxEmailClaimService.claimNextBatch(batchSize);
+        List<Long> ids = outboxEmailClaimService.claimNextBatch();
 
         if (ids.isEmpty()) {
             return;
@@ -39,7 +32,7 @@ public class OutboxEmailWorkerService {
         List<CompletableFuture<Void>> futures = ids.stream()
                 .map(id -> CompletableFuture.runAsync(() -> {
                     try {
-                        singleOutboxEmailProcessor.processOne(id, retryDelayMinutes);
+                        singleOutboxEmailProcessor.processOne(id);
                     } catch (OutboxEmailProcessingException ex) {
                         log.error("Failed to process outbox email id={}", id, ex);
                     }

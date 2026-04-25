@@ -1,9 +1,9 @@
 package org.mushroom.service;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.invocation.Invocation;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -13,6 +13,7 @@ import org.mushroom.entity.enums.OutboxEmailType;
 import org.mushroom.exception.EmailDispatchException;
 import org.mushroom.exception.OutboxEmailProcessingException;
 import org.mushroom.repository.OutboxEmailRepository;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -20,7 +21,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.when;
@@ -34,8 +34,13 @@ class SingleOutboxEmailProcessorUnitTest {
     @Mock
     private EmailDispatcher emailDispatcher;
 
-    @InjectMocks
     private SingleOutboxEmailProcessor singleOutboxEmailProcessor;
+
+    @BeforeEach
+    void setUp() {
+        singleOutboxEmailProcessor = new SingleOutboxEmailProcessor(outboxEmailRepository, emailDispatcher);
+        ReflectionTestUtils.setField(singleOutboxEmailProcessor, "retryDelayMinutes", 5L);
+    }
 
     @Test
     @DisplayName("processOne — переводит запись в SENT при успешной отправке")
@@ -44,7 +49,7 @@ class SingleOutboxEmailProcessorUnitTest {
 
         when(outboxEmailRepository.findById(1L)).thenReturn(Optional.of(email));
 
-        singleOutboxEmailProcessor.processOne(1L, 5);
+        singleOutboxEmailProcessor.processOne(1L);
 
         assertThat(email.getStatus()).isEqualTo(OutboxEmailStatus.SENT);
         assertThat(email.getAttempts()).isEqualTo(0);
@@ -70,7 +75,7 @@ class SingleOutboxEmailProcessorUnitTest {
                 .when(emailDispatcher)
                 .send(email);
 
-        singleOutboxEmailProcessor.processOne(1L, 5);
+        singleOutboxEmailProcessor.processOne(1L);
 
         assertThat(email.getStatus()).isEqualTo(OutboxEmailStatus.FAILED);
         assertThat(email.getAttempts()).isEqualTo(1);
@@ -83,7 +88,7 @@ class SingleOutboxEmailProcessorUnitTest {
     void processOne_ShouldThrow_WhenEmailNotFound() {
         when(outboxEmailRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> singleOutboxEmailProcessor.processOne(1L, 5))
+        assertThatThrownBy(() -> singleOutboxEmailProcessor.processOne(1L))
                 .isInstanceOf(OutboxEmailProcessingException.class)
                 .hasMessage("Outbox email not found: 1");
     }
@@ -99,7 +104,7 @@ class SingleOutboxEmailProcessorUnitTest {
                 .when(emailDispatcher)
                 .send(email);
 
-        assertThatThrownBy(() -> singleOutboxEmailProcessor.processOne(1L, 5))
+        assertThatThrownBy(() -> singleOutboxEmailProcessor.processOne(1L))
                 .isInstanceOf(OutboxEmailProcessingException.class)
                 .hasMessage("Failed to process outbox email id=1");
     }

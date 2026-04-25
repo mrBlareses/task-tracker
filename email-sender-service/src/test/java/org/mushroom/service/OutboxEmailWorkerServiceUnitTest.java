@@ -1,136 +1,110 @@
 package org.mushroom.service;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mushroom.exception.OutboxClaimException;
 import org.mushroom.exception.OutboxEmailProcessingException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OutboxEmailWorkerServiceUnitTest {
 
-    @Test
-    @DisplayName("processBatch — ничего не делает если claim вернул пустой batch")
-    void processBatch_ShouldDoNothing_WhenBatchIsEmpty() throws Exception {
-        OutboxEmailClaimService claimService = mock(OutboxEmailClaimService.class);
-        SingleOutboxEmailProcessor processor = mock(SingleOutboxEmailProcessor.class);
-        ThreadPoolTaskExecutor executor = mock(ThreadPoolTaskExecutor.class);
+    @Mock
+    private OutboxEmailClaimService outboxEmailClaimService;
 
-        when(claimService.claimNextBatch(50)).thenReturn(List.of());
+    @Mock
+    private SingleOutboxEmailProcessor singleOutboxEmailProcessor;
 
-        OutboxEmailWorkerService service =
-                new OutboxEmailWorkerService(claimService, processor, executor);
+    private ThreadPoolTaskExecutor emailProcessingExecutor;
+    private OutboxEmailWorkerService outboxEmailWorkerService;
 
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "batchSize", 50);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "retryDelayMinutes", 5L);
+    @BeforeEach
+    void setUp() {
+        emailProcessingExecutor = new ThreadPoolTaskExecutor();
+        emailProcessingExecutor.setCorePoolSize(2);
+        emailProcessingExecutor.setMaxPoolSize(2);
+        emailProcessingExecutor.setQueueCapacity(10);
+        emailProcessingExecutor.setThreadNamePrefix("test-email-processing-");
+        emailProcessingExecutor.initialize();
 
-        service.processBatch();
+        outboxEmailWorkerService = new OutboxEmailWorkerService(
+                outboxEmailClaimService,
+                singleOutboxEmailProcessor,
+                emailProcessingExecutor
+        );
+    }
 
-        Collection<org.mockito.invocation.Invocation> processorInvocations =
-                mockingDetails(processor).getInvocations();
-
-        assertThat(processorInvocations).isEmpty();
+    @AfterEach
+    void tearDown() {
+        emailProcessingExecutor.shutdown();
     }
 
     @Test
-    @DisplayName("processBatch — обрабатывает все id из batch")
-    void processBatch_ShouldProcessAllIds_WhenBatchExists() throws Exception {
-        OutboxEmailClaimService claimService = mock(OutboxEmailClaimService.class);
-        SingleOutboxEmailProcessor processor = mock(SingleOutboxEmailProcessor.class);
-        ThreadPoolTaskExecutor executor = mock(ThreadPoolTaskExecutor.class);
+    @DisplayName("processBatch — обрабатывает все записи из батча")
+    void processBatch_ShouldProcessAllClaimedIds() throws Exception {
+        when(outboxEmailClaimService.claimNextBatch())
+                .thenReturn(List.of(10L, 11L, 12L));
 
-        when(claimService.claimNextBatch(50)).thenReturn(List.of(1L, 2L, 3L));
+        outboxEmailWorkerService.processBatch();
+
+        verify(singleOutboxEmailProcessor).processOne(10L);
+        verify(singleOutboxEmailProcessor).processOne(11L);
+        verify(singleOutboxEmailProcessor).processOne(12L);
+    }
+
+    @Test
+    @DisplayName("processBatch — ничего не делает если батч пустой")
+    void processBatch_ShouldDoNothing_WhenBatchIsEmpty() throws Exception {
+        when(outboxEmailClaimService.claimNextBatch())
+                .thenReturn(List.of());
+
+        outboxEmailWorkerService.processBatch();
+
+        verifyNoInteractions(singleOutboxEmailProcessor);
+    }
+
+    @Test
+    @DisplayName("processBatch — продолжает обработку остальных записей если одна запись упала")
+    void processBatch_ShouldContinue_WhenOneProcessingFails() throws Exception {
+        when(outboxEmailClaimService.claimNextBatch())
+                .thenReturn(List.of(20L, 21L));
 
         doAnswer(invocation -> {
-            Runnable runnable = invocation.getArgument(0);
-            runnable.run();
+            Long id = invocation.getArgument(0, Long.class);
+            if (id.equals(20L)) {
+                throw new OutboxEmailProcessingException("boom");
+            }
             return null;
-        }).when(executor).execute(any(Runnable.class));
+        }).when(singleOutboxEmailProcessor).processOne(anyLong());
 
-        OutboxEmailWorkerService service =
-                new OutboxEmailWorkerService(claimService, processor, executor);
+        outboxEmailWorkerService.processBatch();
 
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "batchSize", 50);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "retryDelayMinutes", 5L);
-
-        service.processBatch();
-
-        Collection<org.mockito.invocation.Invocation> invocations =
-                mockingDetails(processor).getInvocations();
-
-        long processCalls = invocations.stream()
-                .filter(invocation -> invocation.getMethod().getName().equals("processOne"))
-                .count();
-
-        assertThat(processCalls).isEqualTo(3);
+        verify(singleOutboxEmailProcessor).processOne(20L);
+        verify(singleOutboxEmailProcessor).processOne(21L);
     }
 
     @Test
     @DisplayName("processBatch — пробрасывает OutboxClaimException если claim не удался")
     void processBatch_ShouldThrow_WhenClaimFails() throws Exception {
-        OutboxEmailClaimService claimService = mock(OutboxEmailClaimService.class);
-        SingleOutboxEmailProcessor processor = mock(SingleOutboxEmailProcessor.class);
-        ThreadPoolTaskExecutor executor = mock(ThreadPoolTaskExecutor.class);
-
-        when(claimService.claimNextBatch(50))
+        when(outboxEmailClaimService.claimNextBatch())
                 .thenThrow(new OutboxClaimException("Failed to claim outbox batch", new RuntimeException("db down")));
 
-        OutboxEmailWorkerService service =
-                new OutboxEmailWorkerService(claimService, processor, executor);
-
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "batchSize", 50);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "retryDelayMinutes", 5L);
-
-        assertThatThrownBy(service::processBatch)
+        assertThatThrownBy(() -> outboxEmailWorkerService.processBatch())
                 .isInstanceOf(OutboxClaimException.class)
                 .hasMessage("Failed to claim outbox batch");
-    }
-
-    @Test
-    @DisplayName("processBatch — не останавливает весь batch если одна запись не обработалась")
-    void processBatch_ShouldContinue_WhenSingleRecordFails() throws Exception {
-        OutboxEmailClaimService claimService = mock(OutboxEmailClaimService.class);
-        SingleOutboxEmailProcessor processor = mock(SingleOutboxEmailProcessor.class);
-        ThreadPoolTaskExecutor executor = mock(ThreadPoolTaskExecutor.class);
-
-        when(claimService.claimNextBatch(50)).thenReturn(List.of(1L, 2L));
-
-        doAnswer(invocation -> {
-            Runnable runnable = invocation.getArgument(0);
-            runnable.run();
-            return null;
-        }).when(executor).execute(any(Runnable.class));
-
-        AtomicInteger counter = new AtomicInteger();
-
-        doAnswer(invocation -> {
-            Long id = invocation.getArgument(0);
-            if (id.equals(1L)) {
-                throw new OutboxEmailProcessingException("Failed to process outbox email id=1");
-            }
-            counter.incrementAndGet();
-            return null;
-        }).when(processor).processOne(any(Long.class), anyLong());
-
-        OutboxEmailWorkerService service =
-                new OutboxEmailWorkerService(claimService, processor, executor);
-
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "batchSize", 50);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "retryDelayMinutes", 5L);
-
-        service.processBatch();
-
-        assertThat(counter.get()).isEqualTo(1);
     }
 }

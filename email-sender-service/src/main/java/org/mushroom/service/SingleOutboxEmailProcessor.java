@@ -6,6 +6,7 @@ import org.mushroom.entity.enums.OutboxEmailStatus;
 import org.mushroom.exception.EmailDispatchException;
 import org.mushroom.exception.OutboxEmailProcessingException;
 import org.mushroom.repository.OutboxEmailRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,23 +20,28 @@ public class SingleOutboxEmailProcessor {
     private final OutboxEmailRepository outboxEmailRepository;
     private final EmailDispatcher emailDispatcher;
 
+    @Value("${email-processing.retry-delay-minutes:5}")
+    private long retryDelayMinutes;
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void processOne(Long emailId, long retryDelayMinutes) throws OutboxEmailProcessingException {
+    public void processOne(Long emailId) throws OutboxEmailProcessingException {
         OutboxEmail email = outboxEmailRepository.findById(emailId)
                 .orElseThrow(() -> new OutboxEmailProcessingException("Outbox email not found: " + emailId));
+
+        LocalDateTime now = LocalDateTime.now();
 
         try {
             emailDispatcher.send(email);
 
             email.setStatus(OutboxEmailStatus.SENT);
-            email.setUpdatedAt(LocalDateTime.now());
+            email.setUpdatedAt(now);
 
             outboxEmailRepository.save(email);
         } catch (EmailDispatchException ex) {
             email.setStatus(OutboxEmailStatus.FAILED);
             email.setAttempts(email.getAttempts() + 1);
-            email.setNextAttemptAt(LocalDateTime.now().plusMinutes(retryDelayMinutes));
-            email.setUpdatedAt(LocalDateTime.now());
+            email.setNextAttemptAt(now.plusMinutes(retryDelayMinutes));
+            email.setUpdatedAt(now);
 
             outboxEmailRepository.save(email);
         } catch (Exception ex) {

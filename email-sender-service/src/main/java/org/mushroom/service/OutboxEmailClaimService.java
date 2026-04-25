@@ -4,10 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.mushroom.entity.enums.OutboxEmailStatus;
 import org.mushroom.exception.OutboxClaimException;
 import org.mushroom.repository.OutboxEmailRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -16,18 +16,22 @@ public class OutboxEmailClaimService {
 
     private final OutboxEmailRepository outboxEmailRepository;
 
-    @Transactional
-    public List<Long> claimNextBatch(int batchSize) throws OutboxClaimException {
-        try {
-            LocalDateTime now = LocalDateTime.now();
+    @Value("${email-processing.batch-size:50}")
+    private int batchSize;
 
-            List<Long> ids = outboxEmailRepository.lockNextBatchIds(now, batchSize);
+    @Value("${email-processing.max-attempts:5}")
+    private int maxAttempts;
+
+    @Transactional
+    public List<Long> claimNextBatch() throws OutboxClaimException {
+        try {
+            List<Long> ids = outboxEmailRepository.lockNextBatchIds(batchSize, maxAttempts);
 
             if (ids.isEmpty()) {
                 return List.of();
             }
 
-            outboxEmailRepository.updateStatusByIds(ids, OutboxEmailStatus.PROCESSING, now);
+            outboxEmailRepository.updateStatusByIds(ids, OutboxEmailStatus.PROCESSING);
 
             return ids;
         } catch (Exception ex) {

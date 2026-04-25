@@ -51,26 +51,26 @@ public interface OutboxEmailRepository extends JpaRepository<OutboxEmail, Long> 
             SELECT id
             FROM outbox_emails
             WHERE status IN ('NEW', 'FAILED')
-              AND next_attempt_at <= :now
+              AND attempts < :maxAttempts
+              AND next_attempt_at <= CURRENT_TIMESTAMP
             ORDER BY next_attempt_at, id
             FOR UPDATE SKIP LOCKED
             LIMIT :batchSize
             """, nativeQuery = true)
     List<Long> lockNextBatchIds(
-            @Param("now") LocalDateTime now,
-            @Param("batchSize") int batchSize
+            @Param("batchSize") int batchSize,
+            @Param("maxAttempts") int maxAttempts
     );
 
     @Modifying
     @Query("""
             UPDATE OutboxEmail e
                SET e.status = :status,
-                   e.updatedAt = :updatedAt
+                   e.updatedAt = CURRENT_TIMESTAMP
              WHERE e.id IN :ids
             """)
     int updateStatusByIds(
             @Param("ids") List<Long> ids,
-            @Param("status") OutboxEmailStatus status,
-            @Param("updatedAt") LocalDateTime updatedAt
+            @Param("status") OutboxEmailStatus status
     );
 }

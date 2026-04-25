@@ -6,18 +6,15 @@ import org.mushroom.exception.EmailDispatchException;
 import org.springframework.stereotype.Component;
 
 @Slf4j
+@Component
 public class LoggingEmailDispatcher implements EmailDispatcher {
 
     @Override
     public void send(OutboxEmail email) throws EmailDispatchException {
-        try {
-            log.info("Email dispatched successfully: id={}, dedupKey={}, type={}",
-                    email.getId(), email.getDedupKey(), email.getType());
-        } catch (Exception ex) {
-            throw new EmailDispatchException(
-                    "Failed to dispatch email id=" + email.getId(),
-                    ex
-            );
-        }
+        log.info(
+                "Email dispatched successfully: id={}, type={}",
+                email.getId(),
+                email.getType()
+        );
     }
 }

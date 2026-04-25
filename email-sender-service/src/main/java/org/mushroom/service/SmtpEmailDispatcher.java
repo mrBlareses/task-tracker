@@ -27,7 +27,7 @@ public class SmtpEmailDispatcher implements EmailDispatcher {
             JsonNode payload = email.getPayload();
 
             String recipient = requireText(payload, "email");
-            String subject = buildSubject(email.getType(), payload);
+            String subject = buildSubject(email.getType());
             String body = buildBody(email.getType(), payload);
 
             SimpleMailMessage message = new SimpleMailMessage();
@@ -38,8 +38,12 @@ public class SmtpEmailDispatcher implements EmailDispatcher {
 
             mailSender.send(message);
 
-            log.info("Email dispatched successfully: id={}, dedupKey={}, type={}, to={}",
-                    email.getId(), email.getDedupKey(), email.getType(), recipient);
+            log.info(
+                    "Email dispatched successfully: id={}, type={}, to={}",
+                    email.getId(),
+                    email.getType(),
+                    recipient
+            );
         } catch (Exception ex) {
             throw new EmailDispatchException(
                     "Failed to dispatch email id=" + email.getId(),
@@ -48,7 +52,7 @@ public class SmtpEmailDispatcher implements EmailDispatcher {
         }
     }
 
-    private String buildSubject(OutboxEmailType type, JsonNode payload) {
+    private String buildSubject(OutboxEmailType type) {
         return switch (type) {
             case WELCOME -> "Welcome to Task Tracker";
             case REPORT -> "Your daily task report";

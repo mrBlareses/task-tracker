@@ -56,6 +56,7 @@ email-ingestion:
 email-processing:
   fixed-delay-ms: ${EMAIL_PROCESSING_FIXED_DELAY_MS:5000}
   batch-size: ${EMAIL_PROCESSING_BATCH_SIZE:50}
+  max-attempts: ${EMAIL_PROCESSING_MAX_ATTEMPTS:5}
   worker-threads: ${EMAIL_PROCESSING_WORKER_THREADS:4}
   retry-delay-minutes: ${EMAIL_PROCESSING_RETRY_DELAY_MINUTES:5}
 
