@@ -30,7 +30,7 @@ class OutboxEmailWorkerServiceUnitTest {
 
     @Test
     @DisplayName("processBatch — обрабатывает все записи из батча")
-    void processBatch_ShouldProcessAllClaimedEmails() throws Exception {
+    void processBatch_ShouldProcessAllClaimedEmails() {
         OutboxEmail email10 = buildEmail(10L);
         OutboxEmail email11 = buildEmail(11L);
         OutboxEmail email12 = buildEmail(12L);
@@ -53,7 +53,7 @@ class OutboxEmailWorkerServiceUnitTest {
 
     @Test
     @DisplayName("processBatch — ничего не делает если батч пустой")
-    void processBatch_ShouldDoNothing_WhenBatchIsEmpty() throws Exception {
+    void processBatch_ShouldDoNothing_WhenBatchIsEmpty() {
         OutboxEmailWorkerService outboxEmailWorkerService = new OutboxEmailWorkerService(
                 outboxEmailClaimService,
                 asyncOutboxEmailProcessor
@@ -69,7 +69,7 @@ class OutboxEmailWorkerServiceUnitTest {
 
     @Test
     @DisplayName("processBatch — пробрасывает OutboxClaimException если claim не удался")
-    void processBatch_ShouldThrow_WhenClaimFails() throws Exception {
+    void processBatch_ShouldThrow_WhenClaimFails() {
         OutboxEmailWorkerService outboxEmailWorkerService = new OutboxEmailWorkerService(
                 outboxEmailClaimService,
                 asyncOutboxEmailProcessor
@@ -78,7 +78,7 @@ class OutboxEmailWorkerServiceUnitTest {
         when(outboxEmailClaimService.claimNextBatch())
                 .thenThrow(new OutboxClaimException("Failed to claim outbox batch", new RuntimeException("db down")));
 
-        assertThatThrownBy(() -> outboxEmailWorkerService.processBatch())
+        assertThatThrownBy(outboxEmailWorkerService::processBatch)
                 .isInstanceOf(OutboxClaimException.class)
                 .hasMessage("Failed to claim outbox batch");
     }

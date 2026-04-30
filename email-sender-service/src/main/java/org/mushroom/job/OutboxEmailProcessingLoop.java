@@ -2,6 +2,7 @@ package org.mushroom.job;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.mushroom.exception.OutboxClaimException;
 import org.mushroom.service.OutboxEmailWorkerService;
 import org.springframework.beans.factory.annotation.Value;
@@ -88,7 +89,7 @@ public class OutboxEmailProcessingLoop implements SmartLifecycle {
     }
 
     @Override
-    public synchronized void stop(Runnable callback) {
+    public synchronized void stop(@NonNull Runnable callback) {
         try {
             stop();
         } finally {

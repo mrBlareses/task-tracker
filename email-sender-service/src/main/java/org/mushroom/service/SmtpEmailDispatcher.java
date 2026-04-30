@@ -25,7 +25,7 @@ public class SmtpEmailDispatcher {
         try {
             JsonNode payload = email.getPayload();
 
-            String recipient = requireText(payload, "email");
+            String recipient = requireText(payload);
             String subject = buildSubject(email.getType());
             String body = buildBody(email.getType(), payload);
 
@@ -69,7 +69,7 @@ public class SmtpEmailDispatcher {
         String firstName = textOrDefault(payload, "firstName", "User");
         String lastName = textOrDefault(payload, "lastName", "");
         String fullName = (firstName + " " + lastName).trim();
-        String email = requireText(payload, "email");
+        String email = requireText(payload);
 
         return """
                 Hello, %s!
@@ -85,7 +85,7 @@ public class SmtpEmailDispatcher {
     }
 
     private String buildReportBody(JsonNode payload) {
-        String email = requireText(payload, "email");
+        String email = requireText(payload);
         int pendingCount = payload.path("pendingCount").asInt();
         int completedCount = payload.path("completedCount").asInt();
 
@@ -103,10 +103,10 @@ public class SmtpEmailDispatcher {
                 """.formatted(email, pendingCount, completedCount);
     }
 
-    private String requireText(JsonNode payload, String fieldName) {
-        JsonNode node = payload.get(fieldName);
+    private String requireText(JsonNode payload) {
+        JsonNode node = payload.get("email");
         if (node == null || node.asText().isBlank()) {
-            throw new IllegalStateException("Payload field '%s' is missing or blank".formatted(fieldName));
+            throw new IllegalStateException("Payload field '%s' is missing or blank".formatted("email"));
         }
         return node.asText();
     }

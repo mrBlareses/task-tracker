@@ -40,8 +40,8 @@ class SingleOutboxEmailProcessorUnitTest {
 
     @Test
     @DisplayName("processOne — переводит запись в SENT при успешной отправке")
-    void processOne_ShouldMarkAsSent_WhenDispatchSucceeded() throws Exception {
-        OutboxEmail email = buildEmail(1L, "user1@test.local:1", OutboxEmailType.WELCOME);
+    void processOne_ShouldMarkAsSent_WhenDispatchSucceeded() {
+        OutboxEmail email = buildEmail();
 
         singleOutboxEmailProcessor.processOne(email);
 
@@ -55,7 +55,7 @@ class SingleOutboxEmailProcessorUnitTest {
     @Test
     @DisplayName("processOne — переводит запись в FAILED и откладывает nextAttemptAt при ошибке отправки")
     void processOne_ShouldMarkAsFailed_WhenDispatchFailed() throws Exception {
-        OutboxEmail email = buildEmail(1L, "user1@test.local:1", OutboxEmailType.WELCOME);
+        OutboxEmail email = buildEmail();
         LocalDateTime before = LocalDateTime.now();
 
         doThrow(new EmailDispatchException("smtp down"))
@@ -75,7 +75,7 @@ class SingleOutboxEmailProcessorUnitTest {
     @Test
     @DisplayName("processOne — выбрасывает OutboxEmailProcessingException при неожиданной ошибке")
     void processOne_ShouldThrow_WhenUnexpectedErrorOccurs() throws Exception {
-        OutboxEmail email = buildEmail(1L, "user1@test.local:1", OutboxEmailType.WELCOME);
+        OutboxEmail email = buildEmail();
 
         doThrow(new RuntimeException("unexpected"))
                 .when(smtpEmailDispatcher)
@@ -86,11 +86,11 @@ class SingleOutboxEmailProcessorUnitTest {
                 .hasMessage("Failed to process outbox email id=1");
     }
 
-    private OutboxEmail buildEmail(Long id, String dedupKey, OutboxEmailType type) {
+    private OutboxEmail buildEmail() {
         return OutboxEmail.builder()
-                .id(id)
-                .dedupKey(dedupKey)
-                .type(type)
+                .id(1L)
+                .dedupKey("user1@test.local:1")
+                .type(OutboxEmailType.WELCOME)
                 .status(OutboxEmailStatus.PROCESSING)
                 .attempts(0)
                 .nextAttemptAt(LocalDateTime.now().minusMinutes(1))

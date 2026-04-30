@@ -37,7 +37,7 @@ class OutboxEmailProcessingLoopUnitTest {
 
     @Test
     @DisplayName("start — запускает background loop и вызывает processBatch")
-    void start_ShouldLaunchLoopAndInvokeProcessBatch() throws Exception {
+    void start_ShouldLaunchLoopAndInvokeProcessBatch(){
         when(outboxEmailWorkerService.processBatch()).thenReturn(0);
 
         outboxEmailProcessingLoop.start();
@@ -48,7 +48,7 @@ class OutboxEmailProcessingLoopUnitTest {
 
     @Test
     @DisplayName("stop — корректно останавливает loop")
-    void stop_ShouldStopLoop() throws Exception {
+    void stop_ShouldStopLoop() {
         when(outboxEmailWorkerService.processBatch()).thenReturn(0);
 
         outboxEmailProcessingLoop.start();
@@ -59,7 +59,7 @@ class OutboxEmailProcessingLoopUnitTest {
 
     @Test
     @DisplayName("loop — продолжает работу после OutboxClaimException")
-    void loop_ShouldContinueAfterClaimException() throws Exception {
+    void loop_ShouldContinueAfterClaimException() {
         when(outboxEmailWorkerService.processBatch())
                 .thenThrow(new OutboxClaimException("Failed to claim outbox batch", new RuntimeException("db down")));
 
