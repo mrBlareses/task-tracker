@@ -2,6 +2,7 @@ plugins {
     id 'org.springframework.boot' version '3.3.4'
     id 'io.spring.dependency-management' version '1.1.5'
     id 'java'
+    id 'com.github.davidmc24.gradle.plugin.avro' version '1.9.1'
     id "org.openapi.generator" version "7.13.0"
 }
 
@@ -24,6 +25,7 @@ configurations {
 
 repositories {
     mavenCentral()
+    maven { url 'https://packages.confluent.io/maven/' }
 }
 
 ext["testcontainers.version"] = "1.21.0"
@@ -51,8 +53,10 @@ dependencies {
     implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
     implementation 'io.swagger.core.v3:swagger-annotations:2.2.20'
 
-    //KAFKA
+    // Kafka + Avro
     implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'org.apache.avro:avro:1.11.3'
+    implementation 'io.confluent:kafka-avro-serializer:7.6.0'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -63,18 +67,26 @@ dependencies {
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.2'
     annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
 
-
     // ===== .env =====
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 
     // TEST
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     // Testcontainers
     testImplementation enforcedPlatform("org.testcontainers:testcontainers-bom:1.21.3")
     testImplementation "org.testcontainers:junit-jupiter"
     testImplementation "org.testcontainers:postgresql"
+}
+
+avro {
+    stringType = "String"
+}
+
+tasks.named('compileJava') {
+    dependsOn tasks.named('generateAvroJava')
 }
 
 // ============ OPENAPI GENERATION ============

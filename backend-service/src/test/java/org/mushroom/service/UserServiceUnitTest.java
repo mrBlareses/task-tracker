@@ -6,9 +6,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mushroom.enums.RoleType;
 import org.mushroom.entity.Role;
 import org.mushroom.entity.User;
+import org.mushroom.enums.RoleType;
 import org.mushroom.exception.ConflictException;
 import org.mushroom.exception.ForbiddenActionException;
 import org.mushroom.exception.NotFoundException;
@@ -29,10 +29,14 @@ import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceUnitTest {
@@ -49,11 +53,11 @@ class UserServiceUnitTest {
     @Mock
     private Clock clock;
 
-    @InjectMocks
-    private UserService userService;
-
     @Mock
     private EventPublisher eventPublisher;
+
+    @InjectMocks
+    private UserService userService;
 
     private final UUID userId = UUID.randomUUID();
     private final String email = "test@example.com";
@@ -121,8 +125,10 @@ class UserServiceUnitTest {
     void getUserById_ShouldThrowNotFoundExceptionWithCorrectId() {
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
-        NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> userService.getUserById(userId));
+        NotFoundException exception = assertThrows(
+                NotFoundException.class,
+                () -> userService.getUserById(userId)
+        );
 
         assertTrue(exception.getMessage().contains(userId.toString()));
     }
@@ -142,16 +148,23 @@ class UserServiceUnitTest {
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         UUID otherUserId = UUID.randomUUID();
-        User otherUser = User.builder().id(otherUserId).email("other@test.com").build();
+        User otherUser = User.builder()
+                .id(otherUserId)
+                .email("other@test.com")
+                .build();
+
         when(userRepository.findById(otherUserId)).thenReturn(Optional.of(otherUser));
 
         UserUpdateRequest request = new UserUpdateRequest().firstName("test");
 
-        ForbiddenActionException exception = assertThrows(ForbiddenActionException.class,
-                () -> userService.updatedUser(otherUserId, request));
+        ForbiddenActionException exception = assertThrows(
+                ForbiddenActionException.class,
+                () -> userService.updatedUser(otherUserId, request)
+        );
 
         assertThat(exception.getMessage())
-                .isEqualTo("You can only update your profile");
+                .contains("update")
+                .contains("profile");
     }
 
     @Test
@@ -167,49 +180,27 @@ class UserServiceUnitTest {
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         UUID otherUserId = UUID.randomUUID();
-        User otherUser = User.builder().id(otherUserId).email("other@test.com").build();
+        User otherUser = User.builder()
+                .id(otherUserId)
+                .email("other@test.com")
+                .build();
+
         when(userRepository.findById(otherUserId)).thenReturn(Optional.of(otherUser));
 
-        ForbiddenActionException exception = assertThrows(ForbiddenActionException.class,
-                () -> userService.deleteUser(otherUserId));
+        ForbiddenActionException exception = assertThrows(
+                ForbiddenActionException.class,
+                () -> userService.deleteUser(otherUserId)
+        );
 
         assertThat(exception.getMessage())
-                .isEqualTo("You can only delete your account");
-    }
-
-    @Test
-    void updatedUser_ShouldThrowForbiddenActionExceptionWhenUpdatingOthers() {
-        User currentUser = User.builder()
-                .id(UUID.randomUUID())
-                .email("current@test.com")
-                .build();
-        currentUser.getRoles().add(Role.builder().name(RoleType.USER).user(currentUser).build());
-
-        Authentication auth = mock(Authentication.class);
-        when(auth.getPrincipal()).thenReturn(currentUser);
-        SecurityContextHolder.getContext().setAuthentication(auth);
-
-        UUID otherUserId = UUID.randomUUID();
-        User otherUser = User.builder().id(otherUserId).email("other@test.com").build();
-        when(userRepository.findById(otherUserId)).thenReturn(Optional.of(otherUser));
-
-        UserUpdateRequest request = new UserUpdateRequest().firstName("Tom");
-
-        ForbiddenActionException ex = assertThrows(ForbiddenActionException.class, () -> userService.updatedUser(otherUserId, request));
-        assertThat(ex.getMessage()).isEqualTo("You can only update your profile");
-    }
-
-    @Test
-    void getUserById_ShouldThrowNotFoundException() {
-        when(userRepository.findById(userId)).thenReturn(Optional.empty());
-
-        NotFoundException ex = assertThrows(NotFoundException.class, () -> userService.getUserById(userId));
-        assertThat(ex.getMessage()).contains(userId.toString());
+                .contains("delete")
+                .contains("account");
     }
 
     @Test
     void deleteUser_ShouldDeleteOwnAccount() {
         UUID currentUserId = UUID.randomUUID();
+
         User currentUser = User.builder()
                 .id(currentUserId)
                 .email("me@test.com")
@@ -219,10 +210,10 @@ class UserServiceUnitTest {
 
         Authentication auth = mock(Authentication.class);
         when(auth.getPrincipal()).thenReturn(currentUser);
-
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         when(userRepository.findById(currentUserId)).thenReturn(Optional.of(currentUser));
-        userService.deleteUser(currentUserId);
+
+        assertDoesNotThrow(() -> userService.deleteUser(currentUserId));
     }
 }

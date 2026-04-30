@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT}
+  port: ${SERVER_PORT:8082}
 
 spring:
   application:
@@ -12,13 +12,12 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   jpa:
-    show-sql: false
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: ${SPRING_JPA_SHOW_SQL:false}
     hibernate:
       ddl-auto: validate
 
   liquibase:
-    change-log: classpath:/db/changelog/changelog-master.xml
+    change-log: db/changelog/changelog-master.xml
     enabled: true
 
 auth:
@@ -30,14 +29,14 @@ auth:
 cron:
   daily-analytics:
     expression: ${CRON_DAILY_ANALYTICS_EXPRESSION}
-    zone: ${CRON_DAILY_ANALYTICS_ZONE}
+    zone: ${CRON_DAILY_ANALYTICS_ZONE:UTC}
     backend-base-url: ${CRON_DAILY_ANALYTICS_BACKEND_BASE_URL}
     trigger-path: ${CRON_DAILY_ANALYTICS_TRIGGER_PATH}
-    stale-threshold: ${CRON_DAILY_ANALYTICS_STALE_THRESHOLD}
+    stale-threshold: ${CRON_DAILY_ANALYTICS_STALE_THRESHOLD:PT15M}
 
 retry:
   daily-analytics:
-    max-attempts: ${RETRY_DAILY_ANALYTICS_MAX_ATTEMPTS}
-    first-backoff: ${RETRY_DAILY_ANALYTICS_FIRST_BACKOFF}
-    second-backoff: ${RETRY_DAILY_ANALYTICS_SECOND_BACKOFF}
-    third-backoff: ${RETRY_DAILY_ANALYTICS_THIRD_BACKOFF}
+    max-attempts: ${RETRY_DAILY_ANALYTICS_MAX_ATTEMPTS:3}
+    first-backoff: ${RETRY_DAILY_ANALYTICS_FIRST_BACKOFF:1s}
+    second-backoff: ${RETRY_DAILY_ANALYTICS_SECOND_BACKOFF:2s}
+    third-backoff: ${RETRY_DAILY_ANALYTICS_THIRD_BACKOFF:5s}
