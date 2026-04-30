@@ -106,27 +106,35 @@ tasks:
     cmds:
       - "{{.GRADLE_CMD}} {{.EMAIL}}:test {{.EMAIL}}:jacocoTestReport"
 
-  # ==========================
+    # ==========================
   # DOCKER COMPOSE - BUILD
   # ==========================
 
   compose-build:
     desc: Сборка всех сервисов через Docker Compose
+    deps:
+      - package-jars
     cmds:
       - "{{.COMPOSE}} build"
 
   compose-build-backend:
     desc: Сборка backend-service через Docker Compose
+    deps:
+      - package-backend-jar
     cmds:
       - "{{.COMPOSE}} build backend-service"
 
   compose-build-cron:
     desc: Сборка cron-service через Docker Compose
+    deps:
+      - package-cron-jar
     cmds:
       - "{{.COMPOSE}} build cron-service"
 
   compose-build-email:
     desc: Сборка email-sender-service через Docker Compose
+    deps:
+      - package-email-jar
     cmds:
       - "{{.COMPOSE}} build email-sender-service"
 
@@ -136,6 +144,8 @@ tasks:
 
   docker-compose-up:
     desc: Запуск всего окружения через Docker Compose с пересборкой
+    deps:
+      - package-jars
     cmds:
       - "{{.COMPOSE}} up -d --build"
 

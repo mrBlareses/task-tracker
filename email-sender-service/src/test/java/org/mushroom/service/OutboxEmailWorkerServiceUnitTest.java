@@ -13,6 +13,7 @@ import org.mushroom.exception.OutboxClaimException;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -42,8 +43,9 @@ class OutboxEmailWorkerServiceUnitTest {
         when(outboxEmailClaimService.claimNextBatch())
                 .thenReturn(List.of(email10, email11, email12));
 
-        outboxEmailWorkerService.processBatch();
+        int actual = outboxEmailWorkerService.processBatch();
 
+        assertThat(actual).isEqualTo(3);
         verify(asyncOutboxEmailProcessor).processAsync(email10);
         verify(asyncOutboxEmailProcessor).processAsync(email11);
         verify(asyncOutboxEmailProcessor).processAsync(email12);
@@ -59,8 +61,9 @@ class OutboxEmailWorkerServiceUnitTest {
 
         when(outboxEmailClaimService.claimNextBatch()).thenReturn(List.of());
 
-        outboxEmailWorkerService.processBatch();
+        int actual = outboxEmailWorkerService.processBatch();
 
+        assertThat(actual).isZero();
         verifyNoInteractions(asyncOutboxEmailProcessor);
     }
 

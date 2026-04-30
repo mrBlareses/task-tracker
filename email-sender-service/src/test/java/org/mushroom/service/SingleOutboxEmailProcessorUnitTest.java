@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SingleOutboxEmailProcessorUnitTest {
@@ -29,13 +28,13 @@ class SingleOutboxEmailProcessorUnitTest {
     private OutboxEmailRepository outboxEmailRepository;
 
     @Mock
-    private EmailDispatcher emailDispatcher;
+    private SmtpEmailDispatcher smtpEmailDispatcher;
 
     private SingleOutboxEmailProcessor singleOutboxEmailProcessor;
 
     @BeforeEach
     void setUp() {
-        singleOutboxEmailProcessor = new SingleOutboxEmailProcessor(outboxEmailRepository, emailDispatcher);
+        singleOutboxEmailProcessor = new SingleOutboxEmailProcessor(outboxEmailRepository, smtpEmailDispatcher);
         ReflectionTestUtils.setField(singleOutboxEmailProcessor, "retryDelayMinutes", 5L);
     }
 
@@ -60,7 +59,7 @@ class SingleOutboxEmailProcessorUnitTest {
         LocalDateTime before = LocalDateTime.now();
 
         doThrow(new EmailDispatchException("smtp down"))
-                .when(emailDispatcher)
+                .when(smtpEmailDispatcher)
                 .send(email);
 
         singleOutboxEmailProcessor.processOne(email);
@@ -79,7 +78,7 @@ class SingleOutboxEmailProcessorUnitTest {
         OutboxEmail email = buildEmail(1L, "user1@test.local:1", OutboxEmailType.WELCOME);
 
         doThrow(new RuntimeException("unexpected"))
-                .when(emailDispatcher)
+                .when(smtpEmailDispatcher)
                 .send(email);
 
         assertThatThrownBy(() -> singleOutboxEmailProcessor.processOne(email))

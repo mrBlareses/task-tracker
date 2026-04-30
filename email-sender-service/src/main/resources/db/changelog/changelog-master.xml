@@ -7,5 +7,4 @@
             https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <include file="changes/outbox_emails.xml" relativeToChangelogFile="true"/>
-    <include file="changes/add-processing-status.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

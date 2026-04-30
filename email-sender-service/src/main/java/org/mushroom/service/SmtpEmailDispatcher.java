@@ -14,14 +14,13 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class SmtpEmailDispatcher implements EmailDispatcher {
+public class SmtpEmailDispatcher {
 
     private final JavaMailSender mailSender;
 
     @Value("${app.mail.from}")
     private String from;
 
-    @Override
     public void send(OutboxEmail email) throws EmailDispatchException {
         try {
             JsonNode payload = email.getPayload();

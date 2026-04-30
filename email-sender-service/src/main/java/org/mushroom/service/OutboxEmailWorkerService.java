@@ -14,13 +14,15 @@ public class OutboxEmailWorkerService {
     private final OutboxEmailClaimService outboxEmailClaimService;
     private final AsyncOutboxEmailProcessor asyncOutboxEmailProcessor;
 
-    public void processBatch() throws OutboxClaimException {
+    public int processBatch() throws OutboxClaimException {
         List<OutboxEmail> emails = outboxEmailClaimService.claimNextBatch();
 
         if (emails.isEmpty()) {
-            return;
+            return 0;
         }
 
         emails.forEach(asyncOutboxEmailProcessor::processAsync);
+
+        return emails.size();
     }
 }

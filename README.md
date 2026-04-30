@@ -1,7 +1,7 @@
 # TASK TRACKER Microservice Platform
 
-![Java](https://img.shields.io/badge/Java-24-orange)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-green)
+![Java](https://img.shields.io/badge/Java-21-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.4-green)
 ![Kafka](https://img.shields.io/badge/Kafka-Apache-black)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue)
@@ -27,8 +27,6 @@
 - [Postman коллекция](#postman-коллекция)
 - [Проверка email flow](#проверка-email-flow)
 - [JaCoCo / покрытие тестами](#jacoco--покрытие-тестами)
-- [Структура каталогов](#структура-каталогов)
-
 ---
 
 ## О проекте
@@ -48,20 +46,72 @@
 - синхронно через HTTP
 - асинхронно через Kafka
 
+Для обмена событиями между сервисами используется **Avro + Schema Registry**.
+
 ---
 
 ## Архитектура
 
-Платформа представляет собой многопользовательский планировщик задач, вдохновленный Trello. 
-Пользователи могут использовать его как TODO-лист. Архитектура основана на микросервисах с использованием Spring Boot.
+Платформа состоит из трёх основных сервисов и инфраструктурного окружения.
 
-Основные компоненты:
-- Backend Service: REST API для регистрации, авторизации (JWT), работы с задачами (создание, редактирование, удаление, пометка как выполненной).
-- Scheduler Service: Генерация ежедневных отчетов по задачам (Spring Scheduler запускает задачи по cron в полночь).
-- Email Sender Service: Отправка email (приветственные письма при регистрации, ежедневные отчеты) через MailHog с использованием Spring Mail.
-- Postgres: хранение пользователей и задач.
-- Kafka + Zookeeper: брокер сообщений для асинхронной коммуникации между сервисами (публикация/обработка событий и команд).
-- MailHog (dev): локальный SMTP сервер + web UI для просмотра писем во время разработки.
+### Основные компоненты
+
+- **backend-service**  
+  Основной REST API сервис. Отвечает за:
+   - регистрацию пользователей
+   - аутентификацию и JWT
+   - CRUD операций над задачами
+   - запуск построения daily analytics
+   - публикацию событий в Kafka
+
+- **cron-service**  
+  Orchestration service. Отвечает за:
+   - запуск daily analytics по cron-выражению
+   - ручной и плановый orchestration flow
+   - вызов backend-service по HTTP
+   - хранение execution history в `job_execution`
+   - контроль конфликтующих запусков
+
+- **email-sender-service**  
+  Email processing service. Отвечает за:
+   - чтение Kafka-событий
+   - десериализацию typed Avro contract
+   - сохранение email-задач в `outbox_emails`
+   - дедупликацию через `(dedup_key, type)`
+   - фоновую обработку outbox pipeline
+   - отправку email через SMTP
+
+### Инфраструктура
+
+- **PostgreSQL**  
+  Используется для хранения:
+   - пользователей и задач backend-service
+   - execution history cron-service
+   - outbox pipeline email-sender-service
+
+- **Kafka**  
+  Брокер событий для асинхронного взаимодействия сервисов.
+
+- **Schema Registry**  
+  Хранение и проверка Avro схем для Kafka-событий.
+
+- **Zookeeper**  
+  Координация Kafka.
+
+- **MailHog (dev)**  
+  SMTP сервер и web UI для локальной разработки и проверки писем.
+
+### Email flow
+
+Текущий email flow выглядит так:
+
+`backend-service -> Kafka (Avro) -> email-sender-service -> outbox_emails -> SMTP / MailHog`
+
+Для `email-sender-service` реализован **outbox pattern**:
+- событие сначала сохраняется в `outbox_emails`
+- затем обрабатывается в фоне
+- повторы защищены уникальным индексом `(dedup_key, type)`
+
 ---
 
 ## Диаграммы C4
@@ -76,11 +126,12 @@
 
 ![Backend Service Context](diagrams/TaskTrackerArchitecture.png)
 
-### [Контекстная диаграмма](diagrams/context.puml) 
-- Описание взаимодействия системы с внешними пользователями и системами
-- Высокоуровневый обзор
+### Контекстная диаграмма (исходник)
 
-> 💡 **Примечание**: Для просмотра диаграмм используйте [PlantUML](https://plantuml.com/) или установите плагин для отображения .puml файлов в вашей IDE.
+[Открыть PlantUML исходник](diagrams/context.puml)
+
+> 💡 Для просмотра `.puml` файлов используйте PlantUML или плагин для вашей IDE.
+
 ---
 
 ## Состав репозитория
@@ -99,13 +150,16 @@
 
 ## Стек технологий
 
-- **Java:** 21
-- **Spring Boot:** 3.3.x
-- **Spring Security:** JWT authentication
+- **Java 21**
+- **Spring Boot 3.3.4**
+- **Spring Security**
+- **JWT**
 - **Spring Data JPA**
 - **Liquibase**
 - **PostgreSQL 15**
 - **Apache Kafka**
+- **Schema Registry**
+- **Avro**
 - **Zookeeper**
 - **Spring Mail**
 - **MailHog**
@@ -119,13 +173,13 @@
 
 ---
 
-# Предварительные требования
+## Предварительные требования
 
 Перед запуском проекта убедитесь, что установлены:
 
 - Docker
 - Docker Compose
-- JDK 24
+- JDK 21
 - Git
 - Postman
 - Task (`go-task`) — для использования `Taskfile.yml`
@@ -235,27 +289,48 @@ task status
 
 ## Ручной запуск
 
-```bash
-# Запуск всех сервисов напрямую
-docker compose --env-file .env up -d
+### 1. Подготовить `.env`
 
-# Остановка
+```bash
+cp .env.example .env
+```
+### 2. Собрать jar-артефакты сервисов
+```bash
+task package-jars
+```
+### 3. Поднять окружение
+```bash
+   docker compose --env-file .env up -d --build
+```
+### 4. Остановить окружение
+```bash
 docker compose --env-file .env down
 ```
-
 ## Docker команды
 
 ```bash
-# Сборка всех Docker образов проекта
+# Сборка jar-артефактов для всех сервисов
+task package-jars
+
+# Сборка jar только для backend-service
+task package-backend-jar
+
+# Сборка jar только для cron-service
+task package-cron-jar
+
+# Сборка jar только для email-sender-service
+task package-email-jar
+
+# Сборка всех Docker-образов проекта
 task compose-build
 
-# Сборка Docker образа backend-service
+# Сборка Docker-образа backend-service
 task compose-build-backend
 
-# Сборка Docker образа cron-service
+# Сборка Docker-образа cron-service
 task compose-build-cron
 
-# Сборка Docker образа email-sender-service
+# Сборка Docker-образа email-sender-service
 task compose-build-email
 
 # Запуск всего окружения через Docker Compose с пересборкой
@@ -345,7 +420,7 @@ task email-service-build
 # Очистка email-sender-service
 task email-service-clean
 
-# Генерация JaCoCo отчета для email-sender-service
+# Генерация JaCoCo отчёта для email-sender-service
 task email-jacoco
 ```
 
@@ -361,7 +436,8 @@ task email-jacoco
 | email-sender-service	 | 8083	       | Email ingestion / outbox / SMTP       |
 | MailHog SMTP	         | 1025	       | SMTP сервер для dev                   |
 | MailHog UI	         | 8025	       | Web UI для просмотра писем            |
-
+| Schema Registry       | 8085	       | Registry для Avro схем Kafka          |
+   
 
 ---
 # Debugging / Диагностика
@@ -377,6 +453,26 @@ task docker-compose-logs
 ```bash
 docker ps
 ```
+Проверка логов отдельных сервисов:
+```bash
+task logs-backend
+task logs-cron
+task logs-email
+task logs-mailhog
+```
+Проверка Kafka topics:
+```bash
+task kafka-topics
+```
+Открыть psql в контейнере Postgres:
+```bash
+task db-shell
+```
+Проверить Schema Registry:
+http://localhost:8085/subjects
+
+Проверить MailHog:
+http://localhost:8025
 
 # Конфигурация
 Все настройки выполняются через переменные окружения.
@@ -385,7 +481,16 @@ docker ps
 cp .env.example .env
 ```
 ### Основные переменные
-- Представлены в .env.example
+Все основные переменные уже представлены в .env.example, включая:
+
+- порты сервисов
+- настройки Postgres
+- настройки Kafka
+- URL Schema Registry
+- JWT secret
+- cron / auth настройки
+- email ingestion / email processing настройки
+- SMTP / MailHog настройки
 ---
 
 # API документация
@@ -490,38 +595,3 @@ email-sender-service/build/reports/jacoco/test/html/index.html
 покрытие по пакетам
 непокрытые ветки
 непокрытые методы
-
-## Структура каталогов
-```
-.
-├── backend-service/
-│   ├── build.gradle
-│   ├── openapi/
-│   │   ├── service-api.yml
-│   │   ├── task-api.yml
-│   │   └── user-api.yml
-│   └── src/
-├── cron-service/
-│   ├── build.gradle
-│   └── src/
-├── email-sender-service/
-│   ├── build.gradle
-│   └── src/
-├── diagrams/
-│   ├── BackendServiceComponentDiagramWithOpenAPI.png
-│   ├── component.puml
-│   ├── context.puml
-│   └── TaskTrackerArchitecture.png
-├── gradle/
-│   └── wrapper/
-├── .dockerignore
-├── .env.example
-├── .gitignore
-├── button.svg
-├── docker-compose.yml
-├── gradlew
-├── gradlew.bat
-├── settings.gradle
-├── Taskfile.yml
-└── README.md
-```

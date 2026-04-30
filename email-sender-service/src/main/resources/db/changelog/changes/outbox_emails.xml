@@ -13,7 +13,7 @@
                                            id BIGSERIAL PRIMARY KEY,
                                            payload JSONB NOT NULL,
                                            status TEXT NOT NULL CHECK (
-                                               status IN ('NEW', 'SENT', 'FAILED')
+                                               status IN ('NEW', 'PROCESSING', 'SENT', 'FAILED')
                                                ),
                                            type TEXT NOT NULL CHECK (
                                                type IN ('WELCOME', 'REPORT')

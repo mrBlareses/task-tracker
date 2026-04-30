@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class SingleOutboxEmailProcessor {
 
     private final OutboxEmailRepository outboxEmailRepository;
-    private final EmailDispatcher emailDispatcher;
+    private final SmtpEmailDispatcher smtpEmailDispatcher;
 
     @Value("${email-processing.retry-delay-minutes:5}")
     private long retryDelayMinutes;
@@ -27,7 +27,7 @@ public class SingleOutboxEmailProcessor {
         LocalDateTime now = LocalDateTime.now();
 
         try {
-            emailDispatcher.send(email);
+            smtpEmailDispatcher.send(email);
 
             email.setStatus(OutboxEmailStatus.SENT);
             email.setUpdatedAt(now);
