@@ -4,284 +4,50 @@ dir: "{{.ROOT_DIR}}"
 
 vars:
   GRADLE_CMD: '{{if eq OS "windows"}}cmd /c gradlew.bat{{else}}./gradlew{{end}}'
-  BACKEND: ":backend-service"
-  CRON: ":cron-service"
-  EMAIL: ":email-sender-service"
   COMPOSE: "docker compose --env-file .env"
 
 tasks:
-  # ==========================
-  # ROOT GRADLE
-  # ==========================
-
   build:
-    desc: (root) Полная сборка всего multi-module проекта
+    desc: Полная Gradle сборка проекта
     cmds:
       - "{{.GRADLE_CMD}} clean build"
 
   test:
-    desc: (root) Запуск всех тестов проекта
+    desc: Запуск всех тестов проекта
     cmds:
       - "{{.GRADLE_CMD}} test"
 
-  clean:
-    desc: (root) Очистка build директорий
+  infra:
+    desc: Поднять только инфраструктуру
     cmds:
-      - "{{.GRADLE_CMD}} clean"
+      - "{{.COMPOSE}} up -d postgres zookeeper kafka schema-registry mailhog"
 
-  # ==========================
-  # BACKEND SERVICE (GRADLE)
-  # ==========================
-
-  backend-service-run:
-    desc: Запуск backend-service локально через Gradle
+  services:
+    desc: Поднять только application сервисы
     cmds:
-      - "{{.GRADLE_CMD}} {{.BACKEND}}:bootRun"
+      - "{{.COMPOSE}} up -d --build backend-service cron-service email-sender-service"
 
-  backend-service-test:
-    desc: Запуск тестов backend-service
-    cmds:
-      - "{{.GRADLE_CMD}} {{.BACKEND}}:test"
-
-  backend-service-build:
-    desc: Сборка backend-service jar
-    cmds:
-      - "{{.GRADLE_CMD}} {{.BACKEND}}:clean {{.BACKEND}}:bootJar"
-
-  backend-service-clean:
-    desc: Очистка backend-service
-    cmds:
-      - "{{.GRADLE_CMD}} {{.BACKEND}}:clean"
-
-  # ==========================
-  # CRON SERVICE (GRADLE)
-  # ==========================
-
-  cron-service-run:
-    desc: Запуск cron-service локально через Gradle
-    cmds:
-      - "{{.GRADLE_CMD}} {{.CRON}}:bootRun"
-
-  cron-service-test:
-    desc: Запуск тестов cron-service
-    cmds:
-      - "{{.GRADLE_CMD}} {{.CRON}}:test"
-
-  cron-service-build:
-    desc: Сборка cron-service jar
-    cmds:
-      - "{{.GRADLE_CMD}} {{.CRON}}:clean {{.CRON}}:bootJar"
-
-  cron-service-clean:
-    desc: Очистка cron-service
-    cmds:
-      - "{{.GRADLE_CMD}} {{.CRON}}:clean"
-
-  # ==========================
-  # EMAIL SENDER SERVICE (GRADLE)
-  # ==========================
-
-  email-service-run:
-    desc: Запуск email-sender-service локально через Gradle
-    cmds:
-      - "{{.GRADLE_CMD}} {{.EMAIL}}:bootRun"
-
-  email-service-test:
-    desc: Запуск тестов email-sender-service
-    cmds:
-      - "{{.GRADLE_CMD}} {{.EMAIL}}:test"
-
-  email-service-build:
-    desc: Сборка email-sender-service jar
-    cmds:
-      - "{{.GRADLE_CMD}} {{.EMAIL}}:clean {{.EMAIL}}:bootJar"
-
-  email-service-clean:
-    desc: Очистка email-sender-service
-    cmds:
-      - "{{.GRADLE_CMD}} {{.EMAIL}}:clean"
-
-  email-jacoco:
-    desc: Генерация JaCoCo отчета для email-sender-service
-    cmds:
-      - "{{.GRADLE_CMD}} {{.EMAIL}}:test {{.EMAIL}}:jacocoTestReport"
-
-    # ==========================
-  # DOCKER COMPOSE - BUILD
-  # ==========================
-
-  compose-build:
-    desc: Сборка всех сервисов через Docker Compose
-    deps:
-      - package-jars
-    cmds:
-      - "{{.COMPOSE}} build"
-
-  compose-build-backend:
-    desc: Сборка backend-service через Docker Compose
-    deps:
-      - package-backend-jar
-    cmds:
-      - "{{.COMPOSE}} build backend-service"
-
-  compose-build-cron:
-    desc: Сборка cron-service через Docker Compose
-    deps:
-      - package-cron-jar
-    cmds:
-      - "{{.COMPOSE}} build cron-service"
-
-  compose-build-email:
-    desc: Сборка email-sender-service через Docker Compose
-    deps:
-      - package-email-jar
-    cmds:
-      - "{{.COMPOSE}} build email-sender-service"
-
-  # ==========================
-  # DOCKER COMPOSE - UP / DOWN
-  # ==========================
-
-  docker-compose-up:
-    desc: Запуск всего окружения через Docker Compose с пересборкой
-    deps:
-      - package-jars
+  up:
+    desc: Поднять всё окружение целиком
     cmds:
       - "{{.COMPOSE}} up -d --build"
 
-  docker-compose-up-no-build:
-    desc: Запуск всего окружения через Docker Compose без пересборки
+  stop:
+    desc: Остановить контейнеры
     cmds:
-      - "{{.COMPOSE}} up -d"
+      - "{{.COMPOSE}} stop"
 
-  docker-compose-down:
-    desc: Остановка и удаление контейнеров Docker Compose
+  clean:
+    desc: Остановить контейнеры и удалить volumes
     cmds:
-      - "{{.COMPOSE}} down"
+      - "{{.COMPOSE}} down -v --remove-orphans"
 
-  docker-compose-clean:
-    desc: Полная очистка Docker Compose включая volumes
-    cmds:
-      - "{{.COMPOSE}} down -v"
-
-  # ==========================
-  # DOCKER COMPOSE - SELECTIVE START
-  # ==========================
-
-  up-backend:
-    desc: Поднять только backend-service и его зависимости
-    cmds:
-      - "{{.COMPOSE}} up -d postgres zookeeper kafka backend-service"
-
-  up-cron:
-    desc: Поднять только cron-service и его зависимости
-    cmds:
-      - "{{.COMPOSE}} up -d postgres backend-service cron-service"
-
-  up-email:
-    desc: Поднять только email-sender-service и его зависимости
-    cmds:
-      - "{{.COMPOSE}} up -d postgres zookeeper kafka mailhog email-sender-service"
-
-  # ==========================
-  # LOGS
-  # ==========================
-
-  docker-compose-logs:
-    desc: Просмотр логов всех контейнеров Docker Compose в реальном времени
+  logs:
+    desc: Просмотр логов всех контейнеров
     cmds:
       - "{{.COMPOSE}} logs -f"
 
-  logs-backend:
-    desc: Просмотр логов backend-service
-    cmds:
-      - "{{.COMPOSE}} logs -f backend-service"
-
-  logs-cron:
-    desc: Просмотр логов cron-service
-    cmds:
-      - "{{.COMPOSE}} logs -f cron-service"
-
-  logs-email:
-    desc: Просмотр логов email-sender-service
-    cmds:
-      - "{{.COMPOSE}} logs -f email-sender-service"
-
-  logs-mailhog:
-    desc: Просмотр логов mailhog
-    cmds:
-      - "{{.COMPOSE}} logs -f mailhog"
-
-  # ==========================
-  # INFRA / DIAGNOSTICS
-  # ==========================
-
-  status:
-    desc: Показать список контейнеров проекта
+  ps:
+    desc: Показать статус контейнеров проекта
     cmds:
       - "{{.COMPOSE}} ps"
-
-  ps:
-    desc: Показать все docker контейнеры на машине
-    cmds:
-      - docker ps
-
-  db-shell:
-    desc: Открыть psql внутри postgres контейнера
-    cmds:
-      - "{{.COMPOSE}} exec postgres psql -U postgres -d task_tracker_db"
-
-  kafka-topics:
-    desc: Показать список Kafka топиков
-    cmds:
-      - "{{.COMPOSE}} exec kafka kafka-topics --bootstrap-server kafka:9092 --list"
-
-  mailhog:
-    desc: Подсказка с адресом MailHog UI
-    cmds:
-      - echo "MailHog UI -> http://localhost:8025"
-
-  # ==========================
-  # DEV SHORTCUTS
-  # ==========================
-
-  up:
-    desc: Быстрый запуск полного окружения разработки
-    cmds:
-      - task: docker-compose-up
-
-  up-fast:
-    desc: Быстрый запуск окружения без пересборки
-    cmds:
-      - task: docker-compose-up-no-build
-
-  down:
-    desc: Быстрая остановка окружения разработки
-    cmds:
-      - task: docker-compose-down
-
-  reset:
-    desc: Полный сброс окружения (down -v + up --build)
-    cmds:
-      - task: docker-compose-clean
-      - task: docker-compose-up
-
-  rebuild:
-    desc: Пересобрать все docker образы проекта
-    cmds:
-      - task: compose-build
-
-  rebuild-email:
-    desc: Пересобрать только email-sender-service
-    cmds:
-      - task: compose-build-email
-
-  rebuild-backend:
-    desc: Пересобрать только backend-service
-    cmds:
-      - task: compose-build-backend
-
-  rebuild-cron:
-    desc: Пересобрать только cron-service
-    cmds:
-      - task: compose-build-cron

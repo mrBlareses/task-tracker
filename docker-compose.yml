@@ -92,8 +92,8 @@ services:
 
   backend-service:
     build:
-      context: ./backend-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend-service/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
@@ -118,8 +118,8 @@ services:
 
   cron-service:
     build:
-      context: ./cron-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: cron-service/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
@@ -140,8 +140,8 @@ services:
 
   email-sender-service:
     build:
-      context: ./email-sender-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: email-sender-service/Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
